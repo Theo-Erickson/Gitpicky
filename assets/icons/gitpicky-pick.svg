@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="pickFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6A04A"/>
+      <stop offset="1" stop-color="#D9572A"/>
+    </linearGradient>
+    <linearGradient id="pickShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <path d="M128 14 C200 14 240 28 240 70 C240 128 168 214 128 244 C88 214 16 128 16 70 C16 28 56 14 128 14 Z" fill="url(#pickFill)"/>
+  <ellipse cx="128" cy="52" rx="86" ry="30" fill="url(#pickShine)"/>
+  <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" fill="none">
+    <path d="M94 66 V170"/>
+    <path d="M162 84 C162 128 102 128 96 160"/>
+  </g>
+  <g fill="#E0692F" stroke="#FFFFFF" stroke-width="10">
+    <circle cx="94" cy="56" r="16"/>
+    <circle cx="162" cy="78" r="16"/>
+    <circle cx="94" cy="182" r="16"/>
+  </g>
+</svg>

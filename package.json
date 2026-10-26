@@ -1,0 +1,39 @@
+{
+  "name": "gitpicky",
+  "version": "0.1.0",
+  "description": "See your git history as a picture, learn what every git word means, and preview changes before they happen. Includes an MCP server so an AI assistant can make repo changes you approve.",
+  "author": "The Gitpicky contributors",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/app/main.js",
+  "bin": {
+    "gitpicky-mcp": "dist/mcp/server.js"
+  },
+  "scripts": {
+    "build": "npm run build:node && npm run build:renderer",
+    "build:node": "tsc -p tsconfig.json",
+    "build:renderer": "node scripts/build-renderer.mjs",
+    "start": "npm run build && electron .",
+    "mcp": "node dist/mcp/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "electron": "^44.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<owner>/Gitpicky.git"
+  }
+}
