@@ -10,6 +10,14 @@ const api: GitpickyApi = {
   plan: (op) => ipcRenderer.invoke('change:plan', op),
   run: (op) => ipcRenderer.invoke('change:run', op),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  proposals: () => ipcRenderer.invoke('proposals:list'),
+  approveProposal: (id) => ipcRenderer.invoke('proposals:approve', id),
+  rejectProposal: (id, note) => ipcRenderer.invoke('proposals:reject', id, note),
+  onProposalsChanged: (listener) => {
+    const handler = () => listener();
+    ipcRenderer.on('proposals:changed', handler);
+    return () => ipcRenderer.removeListener('proposals:changed', handler);
+  },
   onRepoChanged: (listener) => {
     const handler = () => listener();
     ipcRenderer.on('repo:changed', handler);

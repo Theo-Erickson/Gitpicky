@@ -796,6 +796,88 @@ button.sync {
   gap: 8px;
   margin-top: 14px;
 }
+.dialog-actions .spacer {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------- assistant */
+
+.assistant-intro code,
+.setup pre {
+  background: var(--bg-sunken);
+  border-radius: 6px;
+}
+.setup pre {
+  padding: 8px 10px;
+  overflow: auto;
+  white-space: pre;
+}
+.proposal {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--bg);
+}
+.proposal-pending {
+  border-color: var(--accent);
+}
+.proposal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.proposal-title {
+  font-weight: 600;
+}
+.proposal-reason {
+  color: var(--text-muted);
+  margin: 6px 0;
+}
+.proposal-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.proposal-error {
+  color: var(--danger);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.status {
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+}
+.status-pending,
+.status-running {
+  color: var(--accent);
+}
+.status-applied {
+  color: var(--ok);
+}
+.status-failed,
+.status-rejected {
+  color: var(--danger);
+}
+.tab-count {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .field {
   display: flex;
   flex-direction: column;

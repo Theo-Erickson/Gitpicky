@@ -10,6 +10,10 @@ export const RISK_LABEL: Record<Plan['risk'], string> = {
 
 let open: HTMLElement | null = null;
 
+export function isDialogOpen(): boolean {
+  return open !== null;
+}
+
 export function closeDialog(): void {
   open?.remove();
   open = null;
@@ -33,6 +37,9 @@ export interface PlanDialogOptions {
   /** Why the change was requested (assistant proposals). */
   reason?: string;
   approveLabel?: string;
+  /** Adds a "Reject" button (assistant proposals). */
+  onReject?: () => void;
+  cancelLabel?: string;
   onApprove(): Promise<{ ok: boolean; error?: string; log?: { command: string; output: string }[] }>;
   onCancel(): void;
   onLearn(id: string): void;
@@ -84,7 +91,8 @@ export function showPlanDialog(opts: PlanDialogOptions): void {
   const needsConfirm = plan.risk === 'destructive';
   const confirm = needsConfirm ? h('input', { type: 'checkbox', id: 'confirm-risk' }) : null;
   const approve = h('button', { class: `primary${plan.risk === 'destructive' ? ' danger' : ''}`, type: 'button' }, opts.approveLabel ?? 'Do it');
-  const cancel = h('button', { type: 'button', onclick: () => opts.onCancel() }, 'Cancel');
+  const cancel = h('button', { type: 'button', onclick: () => opts.onCancel() }, opts.cancelLabel ?? 'Cancel');
+  const reject = opts.onReject ? h('button', { class: 'danger-text', type: 'button', onclick: () => opts.onReject?.() }, 'Reject') : null;
   const result = h('div', { class: 'plan-result' });
   const blocked = plan.blockers.length > 0;
   const syncDisabled = () => {
@@ -99,6 +107,7 @@ export function showPlanDialog(opts: PlanDialogOptions): void {
     const outcome = await opts.onApprove();
     if (outcome.ok) return; // caller closes the dialog
     approve.textContent = 'Failed';
+    reject?.remove();
     cancel.textContent = 'Close';
     result.replaceChildren(
       h('div', { class: 'callout callout-blocker' }, h('strong', null, 'Git stopped with an error'), h('pre', null, outcome.error ?? 'Unknown error')),
@@ -120,7 +129,7 @@ export function showPlanDialog(opts: PlanDialogOptions): void {
     h('p', { class: 'preview-hint' }, blocked ? '' : 'The history behind this window shows how things will look afterwards (dashed = not real yet).'),
     result,
     confirm ? h('label', { class: 'confirm-row' }, confirm, " I understand this can't be undone.") : null,
-    h('div', { class: 'dialog-actions' }, cancel, approve),
+    h('div', { class: 'dialog-actions' }, reject, h('span', { class: 'spacer' }), cancel, approve),
   );
   show(dialog, opts.onCancel);
 }

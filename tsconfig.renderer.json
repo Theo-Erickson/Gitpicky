@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["src/renderer/**/*.ts", "src/app/api.ts", "src/core/graph.ts", "src/core/types.ts", "src/core/glossary.ts", "src/core/preview.ts"]
+  "include": ["src/renderer/**/*.ts", "src/app/api.ts", "src/core/graph.ts", "src/core/types.ts", "src/core/glossary.ts", "src/core/preview.ts", "src/core/bridge-protocol.ts"]
 }

@@ -5,6 +5,8 @@ import { readCommitFiles, readSnapshot } from '../core/history';
 import { executePlan, planChange, type Operation } from '../core/operations';
 import type { RepoSnapshot } from '../core/types';
 import type { Result } from './api';
+import { Bridge } from './bridge';
+import { ProposalQueue } from './proposals';
 import { SettingsStore } from './settings';
 import { RepoWatcher } from './watcher';
 
@@ -17,6 +19,28 @@ let win: BrowserWindow | null = null;
 let currentRepo: string | null = null;
 const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
 const watcher = new RepoWatcher(() => win?.webContents.send('repo:changed'));
+const proposals = new ProposalQueue();
+const bridge = new Bridge(proposals, {
+  version: app.getVersion(),
+  currentRepo: () => currentRepo,
+  showRepo: async (repo) => {
+    if (repo !== currentRepo) {
+      const opened = await openRepo(repo);
+      if (!opened.ok) throw new Error(opened.error);
+      win?.webContents.send('repo:changed');
+    }
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+  },
+});
+
+proposals.on('changed', (proposal) => {
+  win?.webContents.send('proposals:changed');
+  if (proposal.status === 'pending') win?.flashFrame(true);
+});
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -80,6 +104,19 @@ function registerIpc(): void {
       return { ok: result.ok, error: result.error, log: result.log, plan: result.plan };
     }),
   );
+  ipcMain.handle('proposals:list', () => proposals.list());
+  ipcMain.handle('proposals:approve', (_e, id: string) =>
+    wrap(async () => {
+      win?.flashFrame(false);
+      return proposals.approve(id);
+    }),
+  );
+  ipcMain.handle('proposals:reject', (_e, id: string, note?: string) =>
+    wrap(async () => {
+      win?.flashFrame(false);
+      return proposals.reject(id, note);
+    }),
+  );
   ipcMain.handle('shell:open-external', (_e, url: string) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
   });
@@ -126,10 +163,18 @@ async function createWindow(): Promise<void> {
 app.whenReady().then(async () => {
   registerIpc();
   await createWindow();
+  try {
+    await bridge.start();
+  } catch (error) {
+    // The app still works without it; only the assistant connection is unavailable.
+    console.error('Could not start the assistant bridge:', error);
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();
   });
 });
+
+app.on('will-quit', () => bridge.stop());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

@@ -1,13 +1,14 @@
 import type { RunOutcome } from '../app/api';
+import type { ProposalView } from '../core/bridge-protocol';
 import { lookupTerm } from '../core/glossary';
 import { applyPreview, type Operation, type Plan } from '../core/preview';
 import type { Commit, FileChange, Ref, RepoSnapshot } from '../core/types';
-import { ask, closeDialog, showPlanDialog } from './dialogs';
+import { ask, closeDialog, isDialogOpen, riskPill, showPlanDialog } from './dialogs';
 import { clear, h, relativeTime } from './dom';
 import { WORKING_HASH, badge, renderGraph } from './graph-view';
 import { renderLearn } from './learn';
 
-type Tab = 'details' | 'learn';
+type Tab = 'details' | 'learn' | 'assistant';
 
 interface State {
   snapshot: RepoSnapshot | null;
@@ -22,6 +23,9 @@ interface State {
   picked: Set<string> | null;
   commitMessage: string;
   recent: string[];
+  proposals: ProposalView[];
+  /** Proposal shown in the review dialog right now. */
+  reviewing: string | null;
 }
 
 const state: State = {
@@ -36,6 +40,8 @@ const state: State = {
   picked: null,
   commitMessage: '',
   recent: [],
+  proposals: [],
+  reviewing: null,
 };
 
 const api = window.gitpicky;
@@ -70,9 +76,13 @@ async function load(result: Promise<{ ok: true; value: RepoSnapshot } | { ok: fa
   render();
 }
 
+async function refreshNow(): Promise<void> {
+  await load(api.refresh());
+}
+
 let refreshing = false;
 async function refresh(): Promise<void> {
-  if (refreshing || !state.snapshot) return;
+  if (refreshing) return;
   refreshing = true;
   try {
     await load(api.refresh());
@@ -151,6 +161,126 @@ async function askBranchName(title: string, from?: string): Promise<void> {
   ]);
   if (!values?.name) return;
   await propose({ type: 'create_branch', name: values.name, from, switchTo: values.switchTo === 'true' });
+}
+
+// ---------------------------------------------------------------- assistant proposals
+
+const seenProposals = new Set<string>();
+
+async function loadProposals(): Promise<void> {
+  state.proposals = await api.proposals();
+  const fresh = state.proposals.filter((p) => p.status === 'pending' && !seenProposals.has(p.id));
+  for (const p of state.proposals) seenProposals.add(p.id);
+  // A reviewed proposal that changed elsewhere (or vanished) closes its dialog.
+  if (state.reviewing && !state.proposals.some((p) => p.id === state.reviewing && p.status === 'pending')) {
+    if (isDialogOpen()) closeDialog();
+    state.reviewing = null;
+    state.preview = null;
+  }
+  if (fresh.length && !isDialogOpen()) {
+    state.tab = 'assistant';
+    // The app has switched to the proposal's repository; refresh before previewing.
+    await refreshNow();
+    reviewProposal(fresh[fresh.length - 1]);
+    return;
+  }
+  render();
+}
+
+function reviewProposal(p: ProposalView): void {
+  state.reviewing = p.id;
+  state.preview = p.plan.blockers.length ? null : p.plan;
+  render();
+  const finish = async () => {
+    closeDialog();
+    state.reviewing = null;
+    state.preview = null;
+    await refreshNow();
+    await loadProposals();
+  };
+  showPlanDialog({
+    plan: p.plan,
+    source: `${p.requestedBy} is asking to:`,
+    reason: p.reason || undefined,
+    approveLabel: 'Approve',
+    cancelLabel: 'Decide later',
+    onLearn: openLearn,
+    onCancel: () => {
+      closeDialog();
+      state.reviewing = null;
+      state.preview = null;
+      render();
+    },
+    onReject: async () => {
+      const note = await ask('Tell the assistant why (optional)', [{ name: 'note', label: 'Note', placeholder: 'e.g. use a different branch name' }], 'Reject');
+      if (note === null) {
+        reviewProposal(p);
+        return;
+      }
+      await api.rejectProposal(p.id, note.note);
+      await finish();
+    },
+    onApprove: async () => {
+      const r = await api.approveProposal(p.id);
+      const ok = r.ok && r.value.status === 'applied';
+      if (ok) {
+        await finish();
+        flash(`${p.plan.title}: done.`);
+      } else {
+        state.preview = null;
+        await refreshNow();
+      }
+      return { ok, error: r.ok ? r.value.result?.error : r.error, log: r.ok ? r.value.result?.log : undefined };
+    },
+  });
+}
+
+function assistantPanel(): HTMLElement {
+  const list = state.proposals;
+  const statusText: Record<ProposalView['status'], string> = {
+    pending: 'waiting for you',
+    running: 'running',
+    applied: 'done',
+    failed: 'failed',
+    rejected: 'rejected',
+  };
+  return h(
+    'section',
+    { class: 'panel' },
+    h('h2', null, 'Assistant requests'),
+    h(
+      'p',
+      { class: 'muted assistant-intro' },
+      'When an AI assistant (like Claude) is connected through the Gitpicky MCP server, the changes it wants to make show up here. Nothing happens until you approve.',
+    ),
+    list.length === 0
+      ? h(
+          'div',
+          { class: 'setup' },
+          h('h3', null, 'Connect an assistant'),
+          h('p', null, 'Add this to your assistant\'s MCP settings (for Claude Desktop: Settings → Developer → Edit Config), using the folder where Gitpicky lives:'),
+          h(
+            'pre',
+            null,
+            JSON.stringify({ mcpServers: { gitpicky: { command: 'node', args: ['C:\\path\\to\\Gitpicky\\dist\\mcp\\server.js'] } } }, null, 2),
+          ),
+          h('p', null, 'Then ask something like "make a branch for my new level and commit what I have".'),
+        )
+      : list.map((p) =>
+          h(
+            'article',
+            { class: `proposal proposal-${p.status}` },
+            h('div', { class: 'proposal-head' }, h('span', { class: 'proposal-title' }, p.plan.title), h('span', { class: `status status-${p.status}` }, statusText[p.status])),
+            p.reason ? h('p', { class: 'proposal-reason' }, `“${p.reason}”`) : null,
+            h('div', { class: 'proposal-meta' }, `${p.requestedBy} · ${relativeTime(p.createdAt)} · `, riskPill(p.plan.risk)),
+            p.status === 'failed' && p.result?.error ? h('p', { class: 'proposal-error' }, p.result.error) : null,
+            p.status === 'rejected' && p.note ? h('p', { class: 'proposal-meta' }, `Your note: ${p.note}`) : null,
+            p.status === 'pending'
+              ? h('div', { class: 'actions', style: 'margin-top:8px' }, h('button', { class: 'primary', type: 'button', onclick: () => reviewProposal(p) }, 'Review'))
+              : null,
+          ),
+        ),
+  );
 }
 
 // ---------------------------------------------------------------- rendering
@@ -523,15 +653,17 @@ function sidebar(snapshot: RepoSnapshot): HTMLElement {
         },
       },
       label,
+      id === 'assistant' && pending > 0 ? h('span', { class: 'tab-count' }, pending) : null,
     );
+  const pending = state.proposals.filter((p) => p.status === 'pending').length;
   return h(
     'aside',
     { class: 'sidebar' },
-    h('nav', { class: 'tabs' }, tab('details', 'Details'), tab('learn', 'Learn')),
+    h('nav', { class: 'tabs' }, tab('details', 'Details'), tab('learn', 'Learn'), tab('assistant', 'Assistant')),
     h(
       'div',
       { class: 'sidebar-body' },
-      state.tab === 'details' ? detailsPanel(snapshot) : renderLearn(state.learn, render),
+      state.tab === 'details' ? detailsPanel(snapshot) : state.tab === 'learn' ? renderLearn(state.learn, render) : assistantPanel(),
     ),
   );
 }
@@ -574,6 +706,8 @@ async function start(): Promise<void> {
   api.onRepoChanged(() => {
     if (!state.preview) void refresh();
   });
+  api.onProposalsChanged(() => void loadProposals());
+  await loadProposals();
   const initial = await api.refresh();
   if (initial) await load(Promise.resolve(initial));
   else render();
