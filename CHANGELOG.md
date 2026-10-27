@@ -23,3 +23,7 @@ First working version.
 - Commit details show the author's email and any co-authors
 - Glossary: Author / Committer, Co-author, Rewriting history
 - Pick icon: branch glyph recentered so it no longer runs off the edge
+- Repo paths use the native Windows form, so the same repo is never treated as two
+- README rebuilt with real footage: banner, hero and clips recorded from the app with the
+  studio's readme_media tool and a new Electron capture driver (`tools/readme_capture/`)
+- Esc closes a preview or form from anywhere in the window

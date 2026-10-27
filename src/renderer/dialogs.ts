@@ -9,6 +9,7 @@ export const RISK_LABEL: Record<Plan['risk'], string> = {
 };
 
 let open: HTMLElement | null = null;
+let dismissOnEscape: ((e: KeyboardEvent) => void) | null = null;
 
 export function isDialogOpen(): boolean {
   return open !== null;
@@ -17,14 +18,18 @@ export function isDialogOpen(): boolean {
 export function closeDialog(): void {
   open?.remove();
   open = null;
+  if (dismissOnEscape) document.removeEventListener('keydown', dismissOnEscape);
+  dismissOnEscape = null;
 }
 
 function show(content: HTMLElement, onDismiss: () => void): void {
   closeDialog();
   const overlay = h('div', { class: 'overlay', onclick: (e: MouseEvent) => e.target === overlay && onDismiss() }, content);
-  overlay.addEventListener('keydown', (e) => {
+  // Esc works wherever focus is, even when the dialog's buttons are disabled.
+  dismissOnEscape = (e: KeyboardEvent) => {
     if (e.key === 'Escape') onDismiss();
-  });
+  };
+  document.addEventListener('keydown', dismissOnEscape);
   document.body.appendChild(overlay);
   open = overlay;
   (content.querySelector('input, textarea, button.primary') as HTMLElement | null)?.focus();
