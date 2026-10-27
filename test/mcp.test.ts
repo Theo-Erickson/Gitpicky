@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -111,7 +111,9 @@ describe('MCP server', () => {
       });
       expect(text).toContain('approved and done');
       expect(repo.git('branch', '--show-current').trim()).toBe('feature/save-game');
-      expect(shown).toContain(repo.dir);
+      // Compare real paths: Windows may spell the temp folder differently (case, short names).
+      const real = (p: string) => realpathSync.native(p).toLowerCase();
+      expect(shown.map(real)).toContain(real(repo.dir));
     });
 
     it('passes along a rejection and changes nothing', async () => {

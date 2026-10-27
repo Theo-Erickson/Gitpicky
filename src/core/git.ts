@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { resolve } from 'node:path';
 
 export class GitError extends Error {
   constructor(
@@ -62,8 +63,9 @@ export function runGit(cwd: string, args: string[], options: RunGitOptions = {})
 /** Resolves the top-level folder of the repo containing `path`, or null if it isn't in one. */
 export async function findRepoRoot(path: string): Promise<string | null> {
   try {
-    const out = await runGit(path, ['rev-parse', '--show-toplevel']);
-    return out.trim() || null;
+    const out = (await runGit(path, ['rev-parse', '--show-toplevel'])).trim();
+    // Git prints forward slashes on Windows (C:/Users/...); resolve() gives the native form.
+    return out ? resolve(out) : null;
   } catch {
     return null;
   }

@@ -25,6 +25,8 @@ export function makeRepo(): { dir: string; git: (...args: string[]) => string; w
   git('config', 'user.name', 'Test');
   git('config', 'user.email', 'test@example.com');
   git('config', 'commit.gpgsign', 'false');
+  // Keep line endings exactly as written, whatever the machine's global git settings are.
+  git('config', 'core.autocrlf', 'false');
   const write = (file: string, text: string) => {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
     writeFileSync(join(dir, file), text);
