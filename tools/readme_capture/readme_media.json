@@ -1,0 +1,25 @@
+{
+  "tool_version": "1.0",
+  "project": "../..",
+  "out": "../../.github/readme",
+  "work": ".work",
+  "fps": 10,
+  "recordings": {
+    "showcase": {"driver": "capture.mjs", "frames": 780}
+  },
+  "banner": {
+    "recording": "showcase",
+    "title": ["GITPICKY"], "tagline": "Git, explained by picture",
+    "font": "fonts/SpaceGrotesk-Variable.ttf", "title_weight": 700, "title_size": 96,
+    "colors": {"bg": "#14151b", "sky_mid": "#1d1f27", "sky_end": "#2a2236",
+               "from": "#ffb45c", "to": "#e8673a", "accent": "#f39a45", "soft": "#c9c4e6"},
+    "first": 30, "segment": 150, "take": [12, 146], "step": 2, "ms": 110,
+    "crop": [200, 40, 880, 720],
+    "labels": ["PREVIEW A COMMIT", "MERGE A BRANCH", "FIX AUTHORS", "ASSISTANT REQUEST"]
+  },
+  "hero":  {"recording": "showcase", "title": [0, 30], "first": 30, "segment": 150,
+            "count": 5, "take": [8, 146], "step": 3, "ms": 160, "size": [480, 270]},
+  "clips": {"recording": "showcase", "first": 30, "segment": 150,
+            "take": [0, 150], "step": 2, "ms": 120, "size": [400, 225],
+            "names": ["commit", "merge", "authors", "assistant", "learn"]}
+}
