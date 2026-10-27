@@ -256,7 +256,7 @@ installs dependencies, runs the tests, builds the installer and opens the `relea
 | --- | --- | --- |
 | Windows | `npm run dist:win` | `.exe` installer (x64 and arm64) and a portable `.zip` |
 | macOS | `npm run dist:mac` | `.dmg` and `.zip` (universal: Intel and Apple Silicon) |
-| Linux | `npm run dist:linux` | `.AppImage` and `.deb` |
+| Linux | `npm run dist:linux` | `.AppImage` (GitHub Actions also builds a `.deb`) |
 
 macOS installers can only be built on a Mac, so GitHub Actions builds all three:
 

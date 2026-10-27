@@ -41,7 +41,9 @@ jobs:
 
       - name: Build installers
         if: github.event_name != 'pull_request'
-        run: npm run dist -- --publish never
+        # The .deb package needs a homepage; use this repository's address so
+        # nothing personal has to be written into package.json.
+        run: npm run dist -- --publish never -c.extraMetadata.homepage=${{ github.server_url }}/${{ github.repository }}
         env:
           # No code-signing certificates yet; skip looking for them on macOS.
           CSC_IDENTITY_AUTO_DISCOVERY: false

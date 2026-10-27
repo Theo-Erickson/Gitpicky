@@ -20,6 +20,10 @@ asarUnpack:
 
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
+# No auto-update feed yet, so don't generate update metadata (it would need a
+# repository URL in package.json).
+publish: null
+
 win:
   target:
     - target: nsis
