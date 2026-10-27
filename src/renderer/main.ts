@@ -1,4 +1,4 @@
-import type { RunOutcome } from '../app/api';
+import type { RecentRepo, RunOutcome } from '../app/api';
 import type { ProposalView } from '../core/bridge-protocol';
 import { lookupTerm } from '../core/glossary';
 import { applyPreview, type Operation, type Plan } from '../core/preview';
@@ -7,6 +7,8 @@ import { ask, closeDialog, isDialogOpen, riskPill, showPlanDialog } from './dial
 import { clear, h, relativeTime } from './dom';
 import { WORKING_HASH, badge, renderGraph } from './graph-view';
 import { renderLearn } from './learn';
+import { browserKey, newBrowserState, renderBrowser, type BrowserActions, type BrowserState } from './repo-browser';
+import { BROWSE_SHORTCUT, OPEN_SHORTCUT, pickerKey, renderPicker, renderRecentCards, type PickerActions, type PickerState } from './repo-picker';
 
 type Tab = 'details' | 'learn' | 'assistant';
 
@@ -24,7 +26,9 @@ interface State {
   /** Working-tree files ticked for the next commit. */
   picked: Set<string> | null;
   commitMessage: string;
-  recent: string[];
+  recent: RecentRepo[];
+  picker: PickerState;
+  browser: BrowserState;
   proposals: ProposalView[];
   /** Where the bundled MCP server is, for the setup snippet. */
   mcpPath: string;
@@ -45,6 +49,8 @@ const state: State = {
   picked: null,
   commitMessage: '',
   recent: [],
+  picker: { open: false, query: '', active: 0 },
+  browser: newBrowserState(),
   proposals: [],
   mcpPath: '',
   reviewing: null,
@@ -81,6 +87,98 @@ async function load(result: Promise<{ ok: true; value: RepoSnapshot } | { ok: fa
     state.error = r.error;
   }
   render();
+  void loadRecent();
+}
+
+// ---------------------------------------------------------------- recent repositories
+
+async function loadRecent(): Promise<void> {
+  state.recent = await api.recentRepos();
+  if (state.picker.open || !state.snapshot) render();
+}
+
+const pickerActions: PickerActions = {
+  open: (path) => {
+    closePicker();
+    if (path !== state.snapshot?.path) void load(api.openRepo(path));
+  },
+  forget: async (path) => {
+    state.recent = await api.forgetRepo(path);
+    state.picker.active = Math.min(state.picker.active, state.recent.length);
+    render();
+  },
+  browse: () => {
+    closePicker();
+    openBrowser();
+  },
+  close: () => closePicker(),
+};
+
+const browserActions: BrowserActions = {
+  open: (path) => {
+    closeBrowser();
+    if (path !== state.snapshot?.path) void load(api.openRepo(path));
+  },
+  chooseFolder: () => {
+    closeBrowser();
+    void load(api.pickRepo());
+  },
+  addRoot: async () => {
+    const result = await api.addScanFolder();
+    if (result) {
+      state.browser.result = result;
+      render();
+    }
+  },
+  removeRoot: async (path) => {
+    state.browser.result = await api.removeScanFolder(path);
+    if (state.browser.root === path) state.browser.root = '';
+    state.browser.active = 0;
+    render();
+  },
+  pickRoot: (path) => {
+    state.browser.root = path;
+    state.browser.active = 0;
+    render();
+  },
+  close: () => closeBrowser(),
+};
+
+function openBrowser(): void {
+  state.browser.open = true;
+  state.browser.loading = true;
+  state.browser.query = '';
+  state.browser.active = 0;
+  render();
+  void loadRecent();
+  void api.browseRepos().then((result) => {
+    state.browser.result = result;
+    state.browser.loading = false;
+    if (state.browser.open) render();
+  });
+}
+
+function closeBrowser(): void {
+  if (!state.browser.open) return;
+  state.browser.open = false;
+  render();
+}
+
+function openPicker(): void {
+  state.picker = { open: true, query: '', active: 0 };
+  render();
+  void loadRecent();
+}
+
+function closePicker(): void {
+  if (!state.picker.open) return;
+  state.picker.open = false;
+  render();
+}
+
+function togglePicker(): void {
+  if (state.picker.open) closePicker();
+  else openPicker();
 }
 
 async function refreshNow(): Promise<void> {
@@ -331,7 +429,19 @@ function header(snapshot: RepoSnapshot | null): HTMLElement {
       ? h(
           'div',
           { class: 'repo-info' },
-          h('button', { class: 'repo-name', type: 'button', title: snapshot.path, onclick: () => load(api.pickRepo()) }, snapshot.name, h('span', { class: 'caret' }, '▾')),
+          h(
+            'button',
+            {
+              class: `repo-name${state.picker.open ? ' open' : ''}`,
+              type: 'button',
+              title: `${snapshot.path}\nSwitch repository (${OPEN_SHORTCUT})`,
+              'aria-haspopup': 'listbox',
+              'aria-expanded': state.picker.open ? 'true' : 'false',
+              onclick: togglePicker,
+            },
+            snapshot.name,
+            h('span', { class: 'caret' }, '▾'),
+          ),
           s?.branch
             ? h('span', { class: 'on-branch', title: lookupTerm('head')?.short }, 'on ', h('strong', null, s.branch))
             : h('button', { class: 'on-branch warn', type: 'button', onclick: () => openLearn('detached-head'), title: 'Click to learn what this means' }, 'detached HEAD'),
@@ -365,15 +475,14 @@ function welcome(): HTMLElement {
     h('h1', null, 'Git, explained by picture.'),
     h('p', null, 'Open a project folder that uses git. Gitpicky will draw its history, explain what everything means, and show you what each change will do before it happens.'),
     state.error ? h('div', { class: 'callout callout-blocker' }, state.error) : null,
-    h('button', { class: 'primary big', type: 'button', onclick: () => load(api.pickRepo()) }, 'Open a repository…'),
-    state.recent.length
-      ? h(
-          'div',
-          { class: 'recent' },
-          h('h3', null, 'Recent'),
-          state.recent.map((p) => h('button', { class: 'recent-item', type: 'button', onclick: () => load(api.openRepo(p)) }, p)),
-        )
-      : null,
+    h(
+      'div',
+      { class: 'welcome-actions' },
+      h('button', { class: 'primary big', type: 'button', onclick: openBrowser }, 'Find a repository…'),
+      h('button', { class: 'big', type: 'button', onclick: () => load(api.pickRepo()) }, 'Choose a folder…'),
+    ),
+    h('p', { class: 'muted welcome-hint' }, `${BROWSE_SHORTCUT} lists every repository in your project folders. You can also drop a folder on this window.`),
+    renderRecentCards(state.recent, pickerActions),
   );
 }
 
@@ -772,6 +881,21 @@ function render(): void {
   clear(root);
   const snapshot = state.snapshot;
   root.appendChild(header(snapshot));
+  if (state.browser.open) root.appendChild(renderBrowser(state.browser, state.recent, browserActions));
+  if (state.picker.open && snapshot) {
+    root.appendChild(renderPicker(state.recent, state.picker, pickerActions));
+    requestAnimationFrame(() => {
+      // Anchor the dropdown under the repository name.
+      const anchor = document.querySelector('.repo-name')?.getBoundingClientRect();
+      const panel = document.querySelector('.picker') as HTMLElement | null;
+      if (anchor && panel) {
+        panel.style.left = `${Math.max(8, anchor.left - 8)}px`;
+        panel.style.top = `${anchor.bottom + 6}px`;
+      }
+      (document.querySelector('.picker-search') as HTMLInputElement | null)?.focus();
+      document.querySelector('.picker-row.active, .picker-browse.active')?.scrollIntoView({ block: 'nearest' });
+    });
+  }
   if (!snapshot) {
     root.appendChild(welcome());
     return;
@@ -797,6 +921,51 @@ function render(): void {
 }
 
 // ---------------------------------------------------------------- start
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'o') {
+    e.preventDefault();
+    if (isDialogOpen()) return;
+    if (e.shiftKey || !state.snapshot) {
+      closePicker();
+      if (state.browser.open) closeBrowser();
+      else openBrowser();
+    } else if (!state.browser.open) {
+      togglePicker();
+    }
+    return;
+  }
+  if (state.browser.open && browserKey(e, state.browser, state.recent, browserActions)) {
+    e.preventDefault();
+    if (state.browser.open) render();
+    return;
+  }
+  if (state.picker.open && pickerKey(e, state.recent, state.picker, pickerActions)) {
+    e.preventDefault();
+    if (state.picker.open) render();
+  }
+});
+
+// Drop a folder (or any file inside a repo) on the window to open it.
+document.addEventListener('dragover', (e) => {
+  if (e.dataTransfer?.types.includes('Files')) {
+    e.preventDefault();
+    document.body.classList.add('dropping');
+  }
+});
+document.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.body.classList.remove('dropping');
+});
+document.addEventListener('drop', (e) => {
+  document.body.classList.remove('dropping');
+  const file = e.dataTransfer?.files[0];
+  if (!file) return;
+  e.preventDefault();
+  if (isDialogOpen()) return;
+  closePicker();
+  const path = api.pathForFile(file);
+  if (path) void load(api.openRepo(path));
+});
 
 async function start(): Promise<void> {
   state.recent = await api.recentRepos();

@@ -489,19 +489,205 @@ button.sync {
   margin-top: 28px;
   text-align: left;
 }
+.welcome-hint {
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+/* ---------------------------------------------------------- repo picker */
+
+.repo-name.open {
+  background: var(--bg-hover);
+}
+.picker-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+.picker {
+  position: absolute;
+  top: 46px;
+  left: 120px;
+  width: 440px;
+  max-width: calc(100vw - 16px);
+  max-height: min(520px, calc(100vh - 70px));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 8px;
+}
+.picker-search {
+  margin-bottom: 6px;
+}
+.picker-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 4px 8px;
+}
+.picker-rows {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.picker-list {
+  display: flex;
+  flex-direction: column;
+}
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.picker-row:hover,
+.picker-row.active {
+  background: var(--bg-hover);
+}
+.picker-row.current .picker-name {
+  color: var(--accent);
+}
+.picker-row.missing {
+  cursor: default;
+  opacity: 0.65;
+}
+.picker-check {
+  width: 14px;
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.picker-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.picker-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker-name > :not(:first-child),
+.picker-name {
+  font-size: 13px;
+}
+.picker-branch {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.picker-missing {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--danger);
+}
+.picker-path {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker-row .picker-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.picker-when {
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.picker-forget {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  visibility: hidden;
+}
+.picker-row:hover .picker-forget,
+.picker-row.active .picker-forget,
+.picker-row.missing .picker-forget {
+  visibility: visible;
+}
+.picker-forget:hover {
+  color: var(--danger);
+}
+.picker-empty {
+  color: var(--text-muted);
+  padding: 6px 8px;
+  margin: 0;
+}
+.picker-browse {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  padding: 9px 8px 6px;
+  text-align: left;
+}
+.picker-browse.active,
+.picker-browse:hover {
+  background: var(--bg-hover);
+}
+kbd {
+  font: 11px 'Cascadia Code', Consolas, ui-monospace, monospace;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.picker-hint {
+  margin: 4px 8px 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.recent-list {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+}
+body.dropping #app::after {
+  content: 'Drop to open this repository';
+  position: fixed;
+  inset: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--accent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  z-index: 50;
+  pointer-events: none;
+}
 .recent h3 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-}
-.recent-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ---------------------------------------------------------- side panels */
@@ -895,4 +1081,192 @@ button.sync {
 }
 .field-check small {
   width: 100%;
+}
+
+/* ---------------------------------------------------------- repo browser */
+
+.browser-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: rgba(10, 11, 15, 0.45);
+  z-index: 30;
+}
+.browser {
+  width: 900px;
+  max-width: 100%;
+  height: min(620px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.browser-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.browser-head h2 {
+  margin: 0;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.browser-search {
+  flex: 1;
+}
+.browser-close {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 2px 8px;
+}
+.browser-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.browser-roots {
+  width: 230px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  overflow: auto;
+}
+.browser-roots h4,
+.browser-group h4 {
+  margin: 4px 6px 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.browser-root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.browser-root:hover,
+.browser-root.active {
+  background: var(--bg-hover);
+}
+.browser-root.active .browser-root-text > span {
+  color: var(--accent);
+}
+.browser-root-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.browser-root-text > span {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.browser-root-text small {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.browser-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  border-radius: 999px;
+  padding: 0 7px;
+}
+.browser-root .picker-forget {
+  visibility: hidden;
+}
+.browser-root:hover .picker-forget {
+  visibility: visible;
+}
+.browser-add {
+  margin: 6px 4px 0;
+  text-align: left;
+  border-style: dashed;
+  background: transparent;
+}
+.browser-note {
+  margin: 6px 6px 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.browser-spacer {
+  flex: 1;
+}
+.browser-choose {
+  margin: 8px 4px 0;
+}
+.browser-list {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 12px 16px;
+}
+.browser-group + .browser-group {
+  margin-top: 12px;
+}
+.browser-group h4 span {
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.browser-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.browser-row:hover,
+.browser-row.active {
+  background: var(--bg-hover);
+}
+.browser-row.current .picker-name {
+  color: var(--accent);
+}
+.browser-row .picker-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.browser-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.browser-row .picker-when {
+  flex-shrink: 0;
+}
+.browser-empty {
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--text);
+}
+.welcome-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }

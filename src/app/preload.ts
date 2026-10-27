@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { GitpickyApi } from './api';
 
 const api: GitpickyApi = {
@@ -6,6 +6,11 @@ const api: GitpickyApi = {
   openRepo: (path) => ipcRenderer.invoke('repo:open', path),
   refresh: () => ipcRenderer.invoke('repo:refresh'),
   recentRepos: () => ipcRenderer.invoke('repo:recent'),
+  forgetRepo: (path) => ipcRenderer.invoke('repo:forget', path),
+  pathForFile: (file) => webUtils.getPathForFile(file),
+  browseRepos: () => ipcRenderer.invoke('repos:browse'),
+  addScanFolder: () => ipcRenderer.invoke('repos:add-root'),
+  removeScanFolder: (path) => ipcRenderer.invoke('repos:remove-root', path),
   commitFiles: (hash) => ipcRenderer.invoke('repo:commit-files', hash),
   commitMessage: (hash) => ipcRenderer.invoke('repo:commit-message', hash),
   plan: (op) => ipcRenderer.invoke('change:plan', op),

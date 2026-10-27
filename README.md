@@ -54,6 +54,8 @@ The name is a nod to *nitpicky*: pick exactly the change you want, nothing more.
 
 ## What it does
 
+- **Finds your projects.** A repository browser lists every repo in your project folders, and a
+  recent-repositories dropdown makes switching one click instead of a folder dialog.
 - **Draws the history.** Every commit is a dot, each line of work gets its own color, and labels
   show where branches, tags, GitHub's copy (`origin/…`) and HEAD ("you are here") point. Edits you
   haven't committed yet show as a dashed dot on top.
@@ -169,12 +171,28 @@ npm install
 npm start
 ```
 
-Click **Open a repository…** and pick any folder that uses git. Gitpicky remembers recent repos and
-refreshes on its own when files change.
+Click **Find a repository…** to see every repository in the folders you keep projects in, grouped
+by folder, with each one's current branch. Gitpicky finds common project folders on its own (and
+the folders your recent repositories live in); add or remove folders in the left column, search by
+name, folder or branch, and open one with a click or <kbd>Enter</kbd>. You can also choose a single
+folder, or drop one on the window.
+
+After that, switch projects from the dropdown under the repository name. It remembers your last 12
+repositories with their current branch, and **Browse all repositories…** at the bottom opens the
+full list again.
+
+| Shortcut | Does |
+| --- | --- |
+| <kbd>Ctrl</kbd>+<kbd>O</kbd> (<kbd>⌘</kbd>+<kbd>O</kbd> on a Mac) | Recent repositories dropdown |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> (<kbd>⇧</kbd>+<kbd>⌘</kbd>+<kbd>O</kbd>) | Browse all repositories |
+| <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd> | Pick from either list |
+| <kbd>Esc</kbd> | Close a list or preview without changing anything |
+
+Gitpicky reopens the last repository on launch and refreshes on its own when files change.
 
 > [!TIP]
-> Press <kbd>Esc</kbd> to close any preview without changing anything, or click
-> **New to these words?** chips in a preview to jump straight to the glossary.
+> New to a word in a preview? Click its chip under **New to these words?** to jump straight to the
+> glossary.
 
 ## Use it with an AI assistant
 

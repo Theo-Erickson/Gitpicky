@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { join } from 'node:path';
+import { existsSync, statSync } from 'node:fs';
+import { dirname, join, sep } from 'node:path';
 import { findRepoRoot } from '../core/git';
 import { readCommitFiles, readCommitMessage, readSnapshot } from '../core/history';
 import { executePlan, planChange, type Operation } from '../core/operations';
@@ -7,6 +8,9 @@ import type { RepoSnapshot } from '../core/types';
 import type { Result } from './api';
 import { Bridge } from './bridge';
 import { ProposalQueue } from './proposals';
+import type { BrowseResult } from './api';
+import { describeRecent } from './recent';
+import { scanForRepos, suggestedRoots } from './scan';
 import { SettingsStore } from './settings';
 import { RepoWatcher } from './watcher';
 
@@ -14,6 +18,9 @@ const ROOT = join(__dirname, '..', '..');
 /** Swap this once the final icon is chosen (see assets/icons). */
 const APP_ICON = join(ROOT, 'assets', 'icons', 'gitpicky-pick-256.png');
 const HISTORY_LIMIT = 400;
+
+// A separate settings folder, for recordings and tests that must not touch your own recent list.
+if (process.env.GITPICKY_USER_DATA) app.setPath('userData', process.env.GITPICKY_USER_DATA);
 
 let win: BrowserWindow | null = null;
 let currentRepo: string | null = null;
@@ -56,7 +63,14 @@ async function wrap<T>(fn: () => Promise<T>): Promise<Result<T>> {
 
 /** Opens a folder as the current repository. Exposed so other parts of the app can switch repos. */
 export async function openRepo(path: string): Promise<Result<RepoSnapshot>> {
-  const root = await findRepoRoot(path);
+  // A file dropped on the window opens the repository it lives in.
+  let folder = path;
+  try {
+    if (statSync(path).isFile()) folder = dirname(path);
+  } catch {
+    return { ok: false, error: `Can't find "${path}". It may have been moved or deleted.` };
+  }
+  const root = await findRepoRoot(folder);
   if (!root) {
     return { ok: false, error: `"${path}" isn't inside a git repository. Pick a folder that has been set up with git (it contains a hidden .git folder).` };
   }
@@ -90,7 +104,46 @@ function mcpServerPath(): string {
     : join(ROOT, 'dist', 'mcp', 'gitpicky-mcp.js');
 }
 
+/** Suggested scan folders: common project folders, plus wherever your recent repositories live. */
+function defaultRoots(): string[] {
+  const roots = suggestedRoots();
+  for (const e of settings.recentRepos) {
+    const parent = dirname(e.path);
+    if (parent !== e.path && existsSync(parent) && !roots.some((r) => r.toLowerCase() === parent.toLowerCase() || parent.toLowerCase().startsWith(`${r.toLowerCase()}${sep}`))) {
+      roots.push(parent);
+    }
+  }
+  return roots;
+}
+
+async function browse(): Promise<BrowseResult> {
+  const fallback = defaultRoots();
+  const roots = settings.scanRoots(fallback);
+  const recent = new Set(settings.recentRepos.map((e) => e.path.toLowerCase()));
+  const found = await scanForRepos(roots);
+  return {
+    roots,
+    suggested: roots.length > 0 && roots.every((r) => fallback.includes(r)) && roots.length === fallback.length,
+    repos: found.map((r) => ({ ...r, recent: recent.has(r.path.toLowerCase()), current: r.path === currentRepo })),
+  };
+}
+
 function registerIpc(): void {
+  ipcMain.handle('repos:browse', () => browse());
+  ipcMain.handle('repos:add-root', async () => {
+    if (!win) return null;
+    const choice = await dialog.showOpenDialog(win, {
+      title: 'Add a folder that contains your projects',
+      properties: ['openDirectory'],
+    });
+    if (choice.canceled || choice.filePaths.length === 0) return null;
+    settings.addScanRoot(choice.filePaths[0], defaultRoots());
+    return browse();
+  });
+  ipcMain.handle('repos:remove-root', (_e, path: string) => {
+    settings.removeScanRoot(path, defaultRoots());
+    return browse();
+  });
   ipcMain.handle('mcp:server-path', () => mcpServerPath());
   ipcMain.handle('repo:pick', async () => {
     if (!win) return null;
@@ -103,7 +156,11 @@ function registerIpc(): void {
   });
   ipcMain.handle('repo:open', (_e, path: string) => openRepo(path));
   ipcMain.handle('repo:refresh', async () => (currentRepo ? wrap(() => readSnapshot(requireRepo(), HISTORY_LIMIT)) : null));
-  ipcMain.handle('repo:recent', () => settings.recentRepos);
+  ipcMain.handle('repo:recent', () => describeRecent(settings.recentRepos, currentRepo));
+  ipcMain.handle('repo:forget', (_e, path: string) => {
+    settings.forgetRepo(path);
+    return describeRecent(settings.recentRepos, currentRepo);
+  });
   ipcMain.handle('repo:commit-message', (_e, hash: string) => wrap(() => readCommitMessage(requireRepo(), hash)));
   ipcMain.handle('repo:commit-files', (_e, hash: string) => wrap(() => readCommitFiles(requireRepo(), hash)));
   ipcMain.handle('change:plan', (_e, op: Operation) => wrap(() => planChange(requireRepo(), op)));
@@ -134,7 +191,7 @@ function registerIpc(): void {
 function startupRepo(): string | null {
   const flag = process.argv.indexOf('--repo');
   if (flag !== -1 && process.argv[flag + 1]) return process.argv[flag + 1];
-  return process.env.GITPICKY_REPO ?? settings.recentRepos[0] ?? null;
+  return process.env.GITPICKY_REPO ?? settings.recentRepos[0]?.path ?? null;
 }
 
 async function createWindow(): Promise<void> {

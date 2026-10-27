@@ -27,3 +27,9 @@ First working version.
 - README rebuilt with real footage: banner, hero and clips recorded from the app with the
   studio's readme_media tool and a new Electron capture driver (`tools/readme_capture/`)
 - Esc closes a preview or form from anywhere in the window
+- Recent repositories dropdown: the last 12 repos with their branch, filter, keyboard navigation,
+  remove from list, flags folders that were moved or deleted; Ctrl/Cmd+O opens it
+- Drop a folder (or any file inside a repo) on the window to open it
+- Repository browser (Ctrl/Cmd+Shift+O): every repo in your project folders, grouped by folder, with
+  branch, last activity and search; finds common project folders and your recent repos' folders
+  automatically, and you can add or remove folders
