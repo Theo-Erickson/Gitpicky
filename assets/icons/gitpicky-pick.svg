@@ -11,6 +11,8 @@
   </defs>
   <path d="M128 14 C200 14 240 28 240 70 C240 128 168 214 128 244 C88 214 16 128 16 70 C16 28 56 14 128 14 Z" fill="url(#pickFill)"/>
   <ellipse cx="128" cy="52" rx="86" ry="30" fill="url(#pickShine)"/>
+  <!-- Branch glyph, nudged right and up and scaled down so it sits inside the narrowing pick. -->
+  <g transform="translate(128 118) scale(0.86) translate(-128 -118) translate(10 -6)">
   <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" fill="none">
     <path d="M94 66 V170"/>
     <path d="M162 84 C162 128 102 128 96 160"/>
@@ -19,5 +21,6 @@
     <circle cx="94" cy="56" r="16"/>
     <circle cx="162" cy="78" r="16"/>
     <circle cx="94" cy="182" r="16"/>
+  </g>
   </g>
 </svg>
