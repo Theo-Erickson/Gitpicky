@@ -1,5 +1,5 @@
 import { GLOSSARY } from '../core/glossary';
-import { formatCommand, type Plan } from '../core/preview';
+import { describeStep, type Plan } from '../core/preview';
 import { h } from './dom';
 
 export const RISK_LABEL: Record<Plan['risk'], string> = {
@@ -68,7 +68,7 @@ export function planBody(plan: Plan, onLearn: (id: string) => void): HTMLElement
           h(
             'ol',
             null,
-            plan.steps.map((s) => h('li', null, h('code', null, formatCommand(s.args)), h('span', { class: 'step-why' }, s.why))),
+            plan.steps.map((s) => h('li', null, h('code', null, describeStep(s)), h('span', { class: 'step-why' }, s.why))),
           ),
         )
       : null,
@@ -128,7 +128,7 @@ export function showPlanDialog(opts: PlanDialogOptions): void {
     planBody(plan, opts.onLearn),
     h('p', { class: 'preview-hint' }, blocked ? '' : 'The history behind this window shows how things will look afterwards (dashed = not real yet).'),
     result,
-    confirm ? h('label', { class: 'confirm-row' }, confirm, " I understand this can't be undone.") : null,
+    confirm ? h('label', { class: 'confirm-row' }, confirm, ' I understand the risks above.') : null,
     h('div', { class: 'dialog-actions' }, reject, h('span', { class: 'spacer' }), cancel, approve),
   );
   show(dialog, opts.onCancel);

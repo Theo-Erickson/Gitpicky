@@ -21,7 +21,18 @@ export type Operation =
   | { type: 'fetch'; remote?: string }
   | { type: 'pull' }
   | { type: 'push'; setUpstream?: boolean }
-  | { type: 'abort' };
+  | { type: 'abort' }
+  | {
+      type: 'rewrite_authors';
+      /** Oldest commit to include (it and everything after it on the current branch), or "unpushed". */
+      from: string;
+      /** New author (also used as committer) for the affected commits. */
+      author?: { name: string; email: string };
+      /** Only change the author of commits currently authored by this email. */
+      onlyAuthorEmail?: string;
+      /** Remove "Co-authored-by:" lines from the messages. */
+      removeCoAuthors?: boolean;
+    };
 
 export type OperationType = Operation['type'];
 
@@ -32,12 +43,17 @@ export interface PlanStep {
   args: string[];
   /** Why this step is needed, in plain words. */
   why: string;
+  /** Shown instead of the git command for steps Gitpicky does itself. */
+  display?: string;
+  /** Set for steps Gitpicky performs itself rather than one git command. */
+  internal?: 'rewrite_authors';
 }
 
 export interface PreviewCommit {
   id: string;
   parents: string[];
   subject: string;
+  authorName?: string;
 }
 
 export interface PreviewEffect {
@@ -49,6 +65,8 @@ export interface PreviewEffect {
   removeRefs: { kind: 'branch' | 'tag' | 'remote'; name: string }[];
   /** Where HEAD will be afterwards (branch name or commit), if it changes. */
   head?: { branch: string | null; at: string };
+  /** Existing commits that drop out of the picture (replaced by rewritten copies). */
+  hideCommits?: string[];
 }
 
 export interface Plan {
@@ -79,14 +97,15 @@ export function applyPreview(commits: Commit[], effect: PreviewEffect): Commit[]
       hash: p.id,
       shortHash: 'new',
       parents: p.parents,
-      authorName: '',
+      authorName: p.authorName ?? '',
       authorEmail: '',
       date: '',
       subject: p.subject,
       refs: [],
       preview: true,
     }));
-  const all = [...ghosts, ...commits.map((c) => ({ ...c, refs: c.refs.slice() }))];
+  const hidden = new Set(effect.hideCommits ?? []);
+  const all = [...ghosts, ...commits.filter((c) => !hidden.has(c.hash)).map((c) => ({ ...c, refs: c.refs.slice() }))];
   const removeRef = (kind: string, name: string) => {
     for (const c of all) c.refs = c.refs.filter((r) => !(r.kind === kind && r.name === name));
   };
@@ -111,6 +130,11 @@ export function applyPreview(commits: Commit[], effect: PreviewEffect): Commit[]
     }
   }
   return all;
+}
+
+/** How a step is shown to people: its git command, or a description for internal steps. */
+export function describeStep(step: PlanStep): string {
+  return step.display ?? formatCommand(step.args);
 }
 
 export function formatCommand(args: string[]): string {

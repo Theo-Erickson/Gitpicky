@@ -19,6 +19,8 @@ interface State {
   tab: Tab;
   learn: { query: string; open: string | null };
   files: Map<string, FileChange[]>;
+  /** Full commit messages, fetched when a commit is selected. */
+  messages: Map<string, string>;
   /** Working-tree files ticked for the next commit. */
   picked: Set<string> | null;
   commitMessage: string;
@@ -39,6 +41,7 @@ const state: State = {
   tab: 'details',
   learn: { query: '', open: null },
   files: new Map(),
+  messages: new Map(),
   picked: null,
   commitMessage: '',
   recent: [],
@@ -63,6 +66,7 @@ async function load(result: Promise<{ ok: true; value: RepoSnapshot } | { ok: fa
       state.selected = null;
       state.selectedRef = null;
       state.files.clear();
+      state.messages.clear();
       state.picked = null;
     }
     // Forget ticks for files that no longer have changes.
@@ -490,7 +494,63 @@ function workingPanel(snapshot: RepoSnapshot): HTMLElement {
   );
 }
 
+const CO_AUTHOR = /^[ \t]*co-authored-by:[ \t]*(.*?)[ \t]*$/gim;
+
+function coAuthorsOf(message: string | undefined): string[] {
+  return message ? [...message.matchAll(CO_AUTHOR)].map((m) => m[1]) : [];
+}
+
+/** Asks what to fix, then plans a rewrite_authors change (which warns about pushed commits). */
+async function fixAuthors(snapshot: RepoSnapshot, opts: { from?: string; authorEmail?: string; label: string }): Promise<void> {
+  const branch = snapshot.status.branch ?? 'this branch';
+  const fields: Parameters<typeof ask>[1] = [];
+  if (opts.from) {
+    fields.push({
+      name: 'scope',
+      label: 'Which commits?',
+      type: 'select',
+      value: 'from',
+      options: [
+        { value: 'from', label: `This commit and every later one on ${branch}` },
+        { value: 'unpushed', label: `Only commits on ${branch} not pushed yet` },
+      ],
+    });
+  }
+  fields.push(
+    { name: 'changeAuthor', label: 'Change the author', type: 'checkbox', value: 'true' },
+    { name: 'name', label: 'New author name', value: snapshot.identity?.name ?? '' },
+    { name: 'email', label: 'New author email', value: snapshot.identity?.email ?? '', hint: 'GitHub links commits to your account by this email.' },
+    {
+      name: 'onlyEmail',
+      label: 'Only change commits by this email',
+      value: opts.authorEmail ?? '',
+      placeholder: 'e.g. your old personal email',
+      hint: "Keeps other people's commits credited to them. Leave empty to change every commit in range.",
+    },
+    { name: 'removeCoAuthors', label: 'Remove "Co-authored-by" lines', type: 'checkbox', value: 'true' },
+  );
+  const v = await ask(opts.label, fields, 'Preview');
+  if (!v) return;
+  const changeAuthor = v.changeAuthor === 'true';
+  await propose({
+    type: 'rewrite_authors',
+    from: !opts.from || v.scope === 'unpushed' ? 'unpushed' : opts.from,
+    author: changeAuthor ? { name: v.name, email: v.email } : undefined,
+    onlyAuthorEmail: changeAuthor && v.onlyEmail ? v.onlyEmail : undefined,
+    removeCoAuthors: v.removeCoAuthors === 'true',
+  });
+}
+
 function commitPanel(snapshot: RepoSnapshot, commit: Commit): HTMLElement {
+  if (!state.messages.has(commit.hash)) {
+    void api.commitMessage(commit.hash).then((r) => {
+      if (r.ok) {
+        state.messages.set(commit.hash, r.value);
+        if (state.selected === commit.hash) render();
+      }
+    });
+  }
+  const coAuthors = coAuthorsOf(state.messages.get(commit.hash));
   const files = state.files.get(commit.hash);
   if (!files) {
     void api.commitFiles(commit.hash).then((r) => {
@@ -507,7 +567,10 @@ function commitPanel(snapshot: RepoSnapshot, commit: Commit): HTMLElement {
     'section',
     { class: 'panel' },
     h('h2', { class: 'commit-title' }, commit.subject),
-    h('div', { class: 'commit-meta' }, `${commit.authorName} · ${date ? `${date.toLocaleString()} (${relativeTime(commit.date)})` : ''}`),
+    h('div', { class: 'commit-meta' }, `${commit.authorName} <${commit.authorEmail}> · ${date ? `${date.toLocaleString()} (${relativeTime(commit.date)})` : ''}`),
+    coAuthors.length
+      ? h('div', { class: 'commit-meta' }, h('button', { class: 'chip', type: 'button', onclick: () => openLearn('co-author') }, 'Co-authors'), ' ', coAuthors.join(', '))
+      : null,
     h(
       'div',
       { class: 'commit-meta' },
@@ -528,6 +591,17 @@ function commitPanel(snapshot: RepoSnapshot, commit: Commit): HTMLElement {
         ? h('button', { type: 'button', title: lookupTerm('cherry-pick')?.short, onclick: () => propose({ type: 'cherry_pick', commit: commit.hash }) }, `Copy it onto ${current ?? 'HEAD'} (cherry-pick)`)
         : null,
       isHead && commit.parents.length === 1 ? h('button', { type: 'button', onclick: () => propose({ type: 'undo_last_commit' }) }, 'Take back this commit, keep the changes') : null,
+      current
+        ? h(
+            'button',
+            {
+              type: 'button',
+              title: lookupTerm('rewrite-history')?.short,
+              onclick: () => fixAuthors(snapshot, { from: commit.hash, authorEmail: commit.authorEmail, label: `Fix author / co-authors from ${commit.shortHash}` }),
+            },
+            'Fix author / remove co-authors…',
+          )
+        : null,
       h(
         'button',
         {
@@ -581,6 +655,15 @@ function refPanel(snapshot: RepoSnapshot, ref: Ref, commit: Commit | undefined):
       actions.push(
         snapshot.remotes.length ? h('button', { type: 'button', onclick: () => propose({ type: 'push' }) }, 'Push to the remote') : null,
         snapshot.status.upstream ? h('button', { type: 'button', onclick: () => propose({ type: 'pull' }) }, 'Pull from the remote') : null,
+        h(
+          'button',
+          {
+            type: 'button',
+            title: 'Change the author or remove co-authors on commits you have not pushed yet',
+            onclick: () => fixAuthors(snapshot, { label: `Fix authors before pushing ${ref.name}` }),
+          },
+          'Fix authors before pushing…',
+        ),
       );
     } else {
       actions.push(

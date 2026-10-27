@@ -25,7 +25,8 @@ How to work with it:
 - Then use propose_change. The change appears in the Gitpicky app with a picture of the result, and the person approves or rejects it there. Nothing changes until they approve.
 - Only say a change is done when propose_change or check_proposal reports "approved and done".
 - Propose one change at a time and wait for the result before the next.
-- Prefer safe options: revert over reset, stash over discard, a new branch over rewriting history. Never suggest force pushing.
+- Prefer safe options: revert over reset, stash over discard, a new branch over rewriting history.
+- To fix authorship (wrong email, unwanted co-authors), use rewrite_authors. Prefer from: "unpushed" and set onlyAuthorEmail so other people keep their credit. If the preview says commits are already pushed, explain plainly that a force push would be needed and that anyone else using the branch would be affected, and let the person decide. Never force push for them.
 - Use explain_git_term whenever a git word comes up that the person might not know.`;
 
 const repoPath = z.string().min(1).describe('Absolute path to the project folder (any folder inside the repository works).');

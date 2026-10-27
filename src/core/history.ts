@@ -146,6 +146,8 @@ export async function readHistory(repo: string, limit = 400, remotes?: string[])
     const out = await runGit(repo, [
       'log',
       '--exclude=refs/stash',
+      // Backups Gitpicky makes before rewriting history stay out of the picture.
+      '--exclude=refs/gitpicky/*',
       '--all',
       '--topo-order',
       `--max-count=${limit}`,
@@ -161,14 +163,34 @@ export async function readHistory(repo: string, limit = 400, remotes?: string[])
   }
 }
 
+async function configValue(repo: string, key: string): Promise<string | null> {
+  try {
+    return (await runGit(repo, ['config', '--get', key])).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/** The identity git will put on new commits in this repository. */
+export async function readIdentity(repo: string): Promise<RepoSnapshot['identity']> {
+  const [name, email] = await Promise.all([configValue(repo, 'user.name'), configValue(repo, 'user.email')]);
+  return name && email ? { name, email } : null;
+}
+
+/** Full message of one commit (subject, body and trailers such as Co-authored-by). */
+export async function readCommitMessage(repo: string, hash: string): Promise<string> {
+  return runGit(repo, ['log', '-1', '--format=%B', hash]);
+}
+
 /** Everything the UI needs to draw a repository, read in one go. */
 export async function readSnapshot(repo: string, limit = 400): Promise<RepoSnapshot> {
   const remotes = await readRemotes(repo);
-  const [status, commits, branches, tags] = await Promise.all([
+  const [status, commits, branches, tags, identity] = await Promise.all([
     readStatus(repo),
     readHistory(repo, limit + 1, remotes),
     listRefs(repo, 'refs/heads'),
     listRefs(repo, 'refs/tags'),
+    readIdentity(repo),
   ]);
   return {
     path: repo,
@@ -179,6 +201,7 @@ export async function readSnapshot(repo: string, limit = 400): Promise<RepoSnaps
     remotes,
     tags,
     truncated: commits.length > limit,
+    identity,
   };
 }
 

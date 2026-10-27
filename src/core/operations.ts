@@ -6,6 +6,7 @@ import { execFile } from 'node:child_process';
 import { GitError, runGit } from './git';
 import { readSnapshot } from './history';
 import type { RepoSnapshot } from './types';
+import { analyzeRewrite, rewriteAuthors } from './rewrite';
 import { formatCommand, type Operation, type Plan, type PreviewEffect } from './preview';
 
 export * from './preview';
@@ -464,6 +465,112 @@ export async function planChange(repo: string, op: Operation, snapshotIn?: RepoS
       break;
     }
 
+    case 'rewrite_authors': {
+      plan.learn = ['author', 'co-author', 'rewrite-history', 'force-push'];
+      const parts: string[] = [];
+      if (op.author) parts.push(`author to ${op.author.name} <${op.author.email}>`);
+      if (op.removeCoAuthors) parts.push('remove co-authors');
+      plan.title = `Rewrite commits: ${parts.join(' and ') || 'authors'}`;
+      const a = await analyzeRewrite(repo, op);
+      for (const problem of a.problems) block(problem);
+      if (a.problems.length) {
+        plan.summary = 'Changes who is credited on commits by re-creating them.';
+        break;
+      }
+      const edited = a.commits.filter((c) => c.edited);
+      const reauthored = edited.filter((c) => c.newAuthor !== c.oldAuthor);
+      const coAuthors = new Map<string, number>();
+      for (const c of edited) for (const name of c.removedCoAuthors) coAuthors.set(name, (coAuthors.get(name) ?? 0) + 1);
+      const carried = a.commits.length - edited.length;
+      const n = (k: number, word: string) => `${k} ${word}${k === 1 ? '' : 's'}`;
+
+      const what: string[] = [];
+      if (reauthored.length) what.push(`sets the author of ${n(reauthored.length, 'commit')} to ${op.author!.name} <${op.author!.email}>`);
+      if (coAuthors.size) what.push(`removes co-author lines from ${n(edited.filter((c) => c.removedCoAuthors.length).length, 'commit')}`);
+      plan.summary =
+        `On "${a.branch}", this ${what.join(' and ')}. ` +
+        `Git can't edit commits in place, so ${n(a.commits.length, 'commit')} get re-created with new IDs` +
+        (carried ? ` (${carried} of them only because a commit before them changed)` : '') +
+        '. Files, dates and messages otherwise stay exactly the same, and your working folder is not touched. A backup of the old history is kept so this can be undone.';
+
+      plan.steps.push({
+        args: [],
+        internal: 'rewrite_authors',
+        display: `Re-create ${n(a.commits.length, 'commit')} and move "${a.branch}" to the new copies (backup saved under refs/gitpicky/backup/${a.branch}/…)`,
+        why: 'Write the corrected commits with git hash-object, then update the branch with git update-ref.',
+      });
+
+      // Who else does this affect?
+      if (op.author && !op.onlyAuthorEmail) {
+        const others = new Map<string, number>();
+        for (const c of reauthored) {
+          if (c.oldAuthor.email.toLowerCase() !== op.author.email.toLowerCase()) {
+            const key = `${c.oldAuthor.name} <${c.oldAuthor.email}>`;
+            others.set(key, (others.get(key) ?? 0) + 1);
+          }
+        }
+        // Without a filter, every author in the range is replaced. Spell out whose credit changes.
+        const credited = [...others].map(([who, count]) => `${who} (${n(count, 'commit')})`);
+        if (credited.length) {
+          warn(
+            `This replaces the author on commits currently credited to: ${credited.join(', ')}. ` +
+              "If any of these are someone else, they lose credit for their work. To fix only your own commits, limit the change to your old email.",
+          );
+        }
+      }
+      if (coAuthors.size) {
+        warn(
+          `Co-author credit will be removed for: ${[...coAuthors].map(([who, count]) => `${who} (${n(count, 'commit')})`).join(', ')}. ` +
+            'GitHub will stop listing them on these commits.',
+        );
+      }
+      if (a.pushed.length) {
+        plan.risk = 'destructive';
+        const where = a.remoteBranches.length ? a.remoteBranches.join(', ') : 'the remote';
+        warn(
+          `${n(a.pushed.length, 'of these commit')} ${a.pushed.length === 1 ? 'is' : 'are'} already on ${where}. ` +
+            `After the rewrite, ${a.branch} and ${where} won't match, and a normal push will be refused. ` +
+            'Updating the remote means a force push, which replaces its history.',
+        );
+        warn(
+          'Anyone who already pulled these commits (teammates, other computers, open pull requests) will end up with the old copies. ' +
+            'They would have to reset their branch to the new history, or the old commits come back when they push. ' +
+            'Only do this on branches nobody else is using, or agree on it with them first.',
+        );
+        warn(
+          "Gitpicky never force pushes. When you're sure, use GitHub Desktop's \"Force push\" button or git push --force-with-lease.",
+        );
+      } else {
+        plan.risk = 'careful';
+        warn("None of these commits have been pushed yet, so this only affects your copy.");
+      }
+      if (a.otherBranches.length) {
+        warn(`Other branches (${a.otherBranches.join(', ')}) also contain some of these commits and will keep the old versions.`);
+      }
+      if (a.tags.length) {
+        warn(`Tags ${a.tags.join(', ')} point at commits being rewritten and will keep pointing at the old versions.`);
+      }
+      const signed = a.commits.filter((c) => c.signed).length;
+      if (signed) warn(`${n(signed, 'commit')} ${signed === 1 ? 'was' : 'were'} signed; the new copies won't be.`);
+
+      // Preview: new copies on top, old ones disappear unless something else still points at them.
+      const ids = new Map<string, string>();
+      a.commits.forEach((c, i) => ids.set(c.hash, `preview-${i}`));
+      for (const c of a.commits) {
+        plan.preview.newCommits.push({
+          id: ids.get(c.hash)!,
+          parents: c.parents.map((p) => ids.get(p) ?? p),
+          subject: c.subject,
+          authorName: c.newAuthor.name,
+        });
+      }
+      const newHead = ids.get(a.head) ?? a.head;
+      plan.preview.moveRefs.push({ kind: 'branch', name: a.branch, to: newHead });
+      plan.preview.head = { branch: a.branch, at: newHead };
+      plan.preview.hideCommits = a.orphaned;
+      break;
+    }
+
     case 'abort': {
       plan.title = `Abort the ${status.inProgress ?? 'operation'}`;
       plan.learn = ['conflict'];
@@ -503,6 +610,21 @@ export async function executePlan(repo: string, op: Operation): Promise<Executio
   }
   const log: ExecutionResult['log'] = [];
   for (const step of plan.steps) {
+    if (step.internal === 'rewrite_authors' && op.type === 'rewrite_authors') {
+      const command = step.display ?? 'rewrite authors';
+      try {
+        const r = await rewriteAuthors(repo, op);
+        log.push({
+          command,
+          output: `Re-created ${r.rewritten} commits. ${r.oldHead.slice(0, 7)} -> ${r.newHead.slice(0, 7)}. Old history saved as ${r.backupRef} (undo: reset to that ref).`,
+        });
+        continue;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log.push({ command, output: message });
+        return { ok: false, plan, log, error: message, headBefore };
+      }
+    }
     const command = formatCommand(step.args);
     try {
       const output = await runGit(repo, step.args, { timeoutMs: 5 * 60_000 });

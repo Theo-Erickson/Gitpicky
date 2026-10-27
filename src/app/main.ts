@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { join } from 'node:path';
 import { findRepoRoot } from '../core/git';
-import { readCommitFiles, readSnapshot } from '../core/history';
+import { readCommitFiles, readCommitMessage, readSnapshot } from '../core/history';
 import { executePlan, planChange, type Operation } from '../core/operations';
 import type { RepoSnapshot } from '../core/types';
 import type { Result } from './api';
@@ -104,6 +104,7 @@ function registerIpc(): void {
   ipcMain.handle('repo:open', (_e, path: string) => openRepo(path));
   ipcMain.handle('repo:refresh', async () => (currentRepo ? wrap(() => readSnapshot(requireRepo(), HISTORY_LIMIT)) : null));
   ipcMain.handle('repo:recent', () => settings.recentRepos);
+  ipcMain.handle('repo:commit-message', (_e, hash: string) => wrap(() => readCommitMessage(requireRepo(), hash)));
   ipcMain.handle('repo:commit-files', (_e, hash: string) => wrap(() => readCommitFiles(requireRepo(), hash)));
   ipcMain.handle('change:plan', (_e, op: Operation) => wrap(() => planChange(requireRepo(), op)));
   ipcMain.handle('change:run', (_e, op: Operation) =>

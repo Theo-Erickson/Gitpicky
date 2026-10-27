@@ -22,6 +22,8 @@ export interface GitpickyApi {
   refresh(): Promise<Result<RepoSnapshot> | null>;
   recentRepos(): Promise<string[]>;
   commitFiles(hash: string): Promise<Result<FileChange[]>>;
+  /** Full commit message, including trailers like Co-authored-by. */
+  commitMessage(hash: string): Promise<Result<string>>;
   plan(op: Operation): Promise<Result<Plan>>;
   run(op: Operation): Promise<Result<RunOutcome>>;
   openExternal(url: string): Promise<void>;

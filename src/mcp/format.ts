@@ -1,7 +1,7 @@
 // Turns repository state and plans into Markdown an assistant can read and relay.
 
 import { renderAsciiGraph } from '../core/graph';
-import { formatCommand, type Plan } from '../core/preview';
+import { describeStep, type Plan } from '../core/preview';
 import type { ProposalView } from '../core/bridge-protocol';
 import type { Commit, RepoSnapshot } from '../core/types';
 
@@ -75,7 +75,7 @@ export function formatPlan(plan: Plan): string {
     lines.push('', '**Good to know:**', ...plan.warnings.map((w) => `- ${w}`));
   }
   if (plan.steps.length) {
-    lines.push('', 'Commands:', ...plan.steps.map((s, i) => `${i + 1}. \`${formatCommand(s.args)}\` - ${s.why}`));
+    lines.push('', 'Commands:', ...plan.steps.map((s, i) => `${i + 1}. \`${describeStep(s)}\` - ${s.why}`));
   }
   if (plan.learn.length) lines.push('', `Terms worth explaining: ${plan.learn.join(', ')} (use explain_git_term).`);
   return lines.join('\n');

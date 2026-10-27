@@ -7,6 +7,7 @@ const api: GitpickyApi = {
   refresh: () => ipcRenderer.invoke('repo:refresh'),
   recentRepos: () => ipcRenderer.invoke('repo:recent'),
   commitFiles: (hash) => ipcRenderer.invoke('repo:commit-files', hash),
+  commitMessage: (hash) => ipcRenderer.invoke('repo:commit-message', hash),
   plan: (op) => ipcRenderer.invoke('change:plan', op),
   run: (op) => ipcRenderer.invoke('change:run', op),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),

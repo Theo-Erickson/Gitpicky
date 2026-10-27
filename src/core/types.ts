@@ -67,4 +67,6 @@ export interface RepoSnapshot {
   tags: string[];
   /** True when the history was cut off at the requested limit. */
   truncated: boolean;
+  /** Name and email git will use for new commits here (user.name / user.email), if set. */
+  identity: { name: string; email: string } | null;
 }

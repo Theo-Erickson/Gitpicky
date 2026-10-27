@@ -246,6 +246,37 @@ export const GLOSSARY: GlossaryEntry[] = [
     related: ['commit', 'force-push'],
   },
   {
+    id: 'author',
+    term: 'Author / Committer',
+    aliases: ['author', 'committer', 'git identity', 'user.name', 'user.email', 'wrong email'],
+    short: 'Who wrote a commit (author) and who saved it into history (committer).',
+    explanation:
+      "Every commit records an author and a committer, each a name plus email, taken from your git settings (user.name and user.email) when you commit. GitHub links commits to accounts by email, so commits made with the wrong email show up under the wrong account, or no account. They usually match; they differ when someone applies another person's work.",
+    inPicture: 'The author is shown next to each commit.',
+    command: 'git config user.email you@example.com',
+    related: ['co-author', 'rewrite-history', 'commit'],
+  },
+  {
+    id: 'co-author',
+    term: 'Co-author',
+    aliases: ['co-authored-by', 'coauthor', 'co-authors', 'trailer'],
+    short: 'Extra people credited on a commit with a "Co-authored-by:" line.',
+    explanation:
+      'A commit has one author, but its message can end with lines like "Co-authored-by: Name <email>". GitHub then shows those people (or tools) as contributors to the commit too. Removing the lines removes that credit.',
+    related: ['author', 'rewrite-history'],
+  },
+  {
+    id: 'rewrite-history',
+    term: 'Rewriting history',
+    aliases: ['rewrite', 'history rewrite', 'change author', 'new commit ids', 'filter-branch', 'filter-repo'],
+    short: 'Replacing existing commits with edited copies, which get new IDs.',
+    explanation:
+      "A commit's ID is calculated from everything in it, including its author, message and parent. So changing an old commit means making a new copy, and every commit after it must be copied too. Amend, rebase and changing authors all do this. Before pushing it's harmless. After pushing, your branch and the remote disagree: updating the remote needs a force push, and anyone who already has the old commits must reset to the new ones.",
+    analogy: 'Reprinting pages of a book that people already have copies of: your new edition is fine, but their copies still say the old thing.',
+    caution: 'Rewriting pushed commits affects everyone who pulled them. Coordinate first, or only do it on branches you alone use.',
+    related: ['force-push', 'amend', 'rebase', 'reflog'],
+  },
+  {
     id: 'stash',
     term: 'Stash',
     aliases: ['stashing', 'git stash', 'stash pop', 'shelve'],

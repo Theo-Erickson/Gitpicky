@@ -23,7 +23,7 @@ learned just enough commands to get by. If you've ever wondered what "detached H
   where each branch, tag, remote branch and HEAD ("you are here") point. Uncommitted edits show up as a
   dashed dot on top.
 - **Explains as you go.** Hover any label for a one-line explanation. The **Learn** tab is a searchable
-  glossary of 35 git terms with analogies, the usual command, and warnings about the risky ones.
+  glossary of 38 git terms with analogies, the usual command, and warnings about the risky ones.
 - **Previews every change.** Commit, branch, switch, merge, revert, cherry-pick, reset, stash, tag,
   push, pull and more. Before anything runs you see:
   - what will happen, in plain words,
@@ -31,6 +31,10 @@ learned just enough commands to get by. If you've ever wondered what "detached H
   - a risk level (Safe / Be careful / Can lose work),
   - warnings such as predicted merge conflicts, and anything blocking it,
   - the history redrawn as it will look afterwards.
+- **Fixes who gets credit.** Change the author of commits made with the wrong email, or remove
+  "Co-authored-by" lines, for one commit onward or just what you haven't pushed yet. Gitpicky spells
+  out whose credit changes, whether the commits are already on GitHub, and what that means for anyone
+  else using the branch, and keeps a backup so it can be undone.
 - **Works with your AI assistant.** The bundled MCP server lets an assistant read the repo, explain
   terms, preview changes, and *propose* them. Proposals pop up in Gitpicky with the assistant's reason;
   you approve or reject. Nothing changes without your click.
@@ -99,8 +103,10 @@ Restart the assistant, keep Gitpicky open, and ask things like:
 - The app and the MCP server talk over `127.0.0.1` only, using a random port and a secret token stored
   in `~/.gitpicky/bridge.json`. Requests from web pages are refused.
 - There is no force push, ever.
-- Destructive actions (hard reset, discarding changes, deleting unmerged work) need an extra
-  "I understand" tick.
+- Destructive actions (hard reset, discarding changes, deleting unmerged work, rewriting pushed
+  commits) need an extra "I understand" tick.
+- Before rewriting history Gitpicky saves the old branch tip under `refs/gitpicky/backup/…`, so you
+  can always go back.
 
 ## Building installers
 

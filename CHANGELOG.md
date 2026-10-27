@@ -16,3 +16,10 @@ First working version.
 - Installers for Windows (NSIS + zip), macOS (dmg + zip) and Linux (AppImage + deb)
 - GitHub Actions workflow that tests on all three systems and builds installers for tagged releases
 - Assistant tab shows a ready-to-copy MCP config with the installed server path
+- `Build-Windows.cmd`: double-click to test and build the Windows installer
+- GitHub Actions builds installers on every push to main, not just tags
+- Fix author / remove co-authors: rewrites a run of commits (or just unpushed ones), with warnings
+  about pushed commits, other people's credit, other branches, tags and signatures, plus a backup ref
+- Commit details show the author's email and any co-authors
+- Glossary: Author / Committer, Co-author, Rewriting history
+- Pick icon: branch glyph recentered so it no longer runs off the edge

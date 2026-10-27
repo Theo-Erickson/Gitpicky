@@ -84,6 +84,24 @@ export const operationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('pull') }).describe('Fetch and merge the remote branch into the current branch.'),
   z.object({ type: z.literal('push'), setUpstream: z.boolean().optional() }).describe('Upload commits to the remote. Never forces.'),
   z.object({ type: z.literal('abort') }).describe('Cancel an in-progress merge, rebase, cherry-pick or revert.'),
+  z
+    .object({
+      type: z.literal('rewrite_authors'),
+      from: z
+        .string()
+        .min(1)
+        .describe('Oldest commit to fix (it and every later commit on the current branch are re-created), or "unpushed" for only the commits not pushed yet.'),
+      author: z
+        .object({ name: z.string().min(1), email: z.string().min(3) })
+        .optional()
+        .describe('New author (also set as committer). Omit to keep authors and only remove co-authors.'),
+      onlyAuthorEmail: z
+        .string()
+        .optional()
+        .describe("Only change commits currently authored by this email (e.g. the person's old personal email). Strongly recommended so other people's commits keep their credit."),
+      removeCoAuthors: z.boolean().optional().describe('Remove "Co-authored-by:" lines from the commit messages.'),
+    })
+    .describe('Change the author and/or remove co-authors on a run of commits. Rewrites history: commits get new IDs, and pushed commits would need a force push, which affects anyone else using the branch.'),
 ]);
 
 // Compile-time check that the schema and the core Operation type stay in sync.
