@@ -26,9 +26,9 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -43,6 +43,9 @@ jobs:
         if: github.event_name != 'pull_request'
         # The .deb package needs a homepage; use this repository's address so
         # nothing personal has to be written into package.json.
+        # Bash on every system: Windows' default PowerShell splits arguments
+        # like -c.extraMetadata.homepage=... at the dot, which breaks the build.
+        shell: bash
         run: npm run dist -- --publish never -c.extraMetadata.homepage=${{ github.server_url }}/${{ github.repository }}
         env:
           # No code-signing certificates yet; skip looking for them on macOS.
@@ -50,7 +53,7 @@ jobs:
 
       - name: Upload installers
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gitpicky-${{ runner.os }}
           path: |
@@ -67,7 +70,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: installers
           merge-multiple: true
