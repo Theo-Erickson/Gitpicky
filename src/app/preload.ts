@@ -10,6 +10,7 @@ const api: GitpickyApi = {
   plan: (op) => ipcRenderer.invoke('change:plan', op),
   run: (op) => ipcRenderer.invoke('change:run', op),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  mcpServerPath: () => ipcRenderer.invoke('mcp:server-path'),
   proposals: () => ipcRenderer.invoke('proposals:list'),
   approveProposal: (id) => ipcRenderer.invoke('proposals:approve', id),
   rejectProposal: (id, note) => ipcRenderer.invoke('proposals:reject', id, note),

@@ -13,3 +13,6 @@ First working version.
 - Learn tab: searchable glossary of git terms
 - MCP server with read-only tools plus `propose_change`, approved inside the app
 - Local, token-protected bridge between the MCP server and the app
+- Installers for Windows (NSIS + zip), macOS (dmg + zip) and Linux (AppImage + deb)
+- GitHub Actions workflow that tests on all three systems and builds installers for tagged releases
+- Assistant tab shows a ready-to-copy MCP config with the installed server path

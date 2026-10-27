@@ -24,6 +24,8 @@ interface State {
   commitMessage: string;
   recent: string[];
   proposals: ProposalView[];
+  /** Where the bundled MCP server is, for the setup snippet. */
+  mcpPath: string;
   /** Proposal shown in the review dialog right now. */
   reviewing: string | null;
 }
@@ -41,6 +43,7 @@ const state: State = {
   commitMessage: '',
   recent: [],
   proposals: [],
+  mcpPath: '',
   reviewing: null,
 };
 
@@ -235,6 +238,10 @@ function reviewProposal(p: ProposalView): void {
   });
 }
 
+function mcpConfig(): string {
+  return JSON.stringify({ mcpServers: { gitpicky: { command: 'node', args: [state.mcpPath || 'path/to/gitpicky-mcp.js'] } } }, null, 2);
+}
+
 function assistantPanel(): HTMLElement {
   const list = state.proposals;
   const statusText: Record<ProposalView['status'], string> = {
@@ -258,11 +265,18 @@ function assistantPanel(): HTMLElement {
           'div',
           { class: 'setup' },
           h('h3', null, 'Connect an assistant'),
-          h('p', null, 'Add this to your assistant\'s MCP settings (for Claude Desktop: Settings → Developer → Edit Config), using the folder where Gitpicky lives:'),
+          h('p', null, 'Add this to your assistant\'s MCP settings (for Claude Desktop: Settings → Developer → Edit Config), then restart the assistant. You also need Node.js installed (nodejs.org).'),
+          h('pre', null, mcpConfig()),
           h(
-            'pre',
-            null,
-            JSON.stringify({ mcpServers: { gitpicky: { command: 'node', args: ['C:\\path\\to\\Gitpicky\\dist\\mcp\\server.js'] } } }, null, 2),
+            'button',
+            {
+              type: 'button',
+              onclick: async () => {
+                await navigator.clipboard.writeText(mcpConfig());
+                flash('Config copied.');
+              },
+            },
+            'Copy config',
           ),
           h('p', null, 'Then ask something like "make a branch for my new level and commit what I have".'),
         )
@@ -703,6 +717,7 @@ function render(): void {
 
 async function start(): Promise<void> {
   state.recent = await api.recentRepos();
+  state.mcpPath = await api.mcpServerPath();
   api.onRepoChanged(() => {
     if (!state.preview) void refresh();
   });

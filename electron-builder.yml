@@ -1,0 +1,50 @@
+# Installer settings. Run `npm run dist` on each OS (or let GitHub Actions do it).
+appId: dev.gitpicky.app
+productName: Gitpicky
+copyright: Copyright © 2026 The Gitpicky contributors
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+  - "!dist/**/*.map"
+
+# The MCP server is run by your AI assistant with plain Node, so it has to
+# live outside the packed app archive.
+asarUnpack:
+  - dist/mcp/gitpicky-mcp.js
+
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+
+linux:
+  category: Development
+  syncDesktopName: true
+  maintainer: The Gitpicky contributors
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]

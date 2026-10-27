@@ -83,7 +83,15 @@ function requireRepo(): string {
   return currentRepo;
 }
 
+/** Where the bundled MCP server lives, so the Assistant tab can show a ready-to-paste config. */
+function mcpServerPath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'mcp', 'gitpicky-mcp.js')
+    : join(ROOT, 'dist', 'mcp', 'gitpicky-mcp.js');
+}
+
 function registerIpc(): void {
+  ipcMain.handle('mcp:server-path', () => mcpServerPath());
   ipcMain.handle('repo:pick', async () => {
     if (!win) return null;
     const choice = await dialog.showOpenDialog(win, {

@@ -56,19 +56,23 @@ refreshes on its own when files change.
 
 ## Connect an AI assistant (MCP)
 
-Build once with `npm run build`, then add Gitpicky to your assistant's MCP config. For Claude Desktop,
-open **Settings → Developer → Edit Config** and add:
+Open Gitpicky's **Assistant** tab and click **Copy config**: it fills in the right path for your
+install. Paste it into your assistant's MCP config (for Claude Desktop: **Settings → Developer → Edit
+Config**). It looks like this:
 
 ```json
 {
   "mcpServers": {
     "gitpicky": {
       "command": "node",
-      "args": ["C:\\path\\to\\Gitpicky\\dist\\mcp\\server.js"]
+      "args": ["C:\\path\\to\\gitpicky-mcp.js"]
     }
   }
 }
 ```
+
+The MCP server runs with [Node.js](https://nodejs.org), so that needs to be installed even if you use
+an installer.
 
 Restart the assistant, keep Gitpicky open, and ask things like:
 
@@ -98,12 +102,43 @@ Restart the assistant, keep Gitpicky open, and ask things like:
 - Destructive actions (hard reset, discarding changes, deleting unmerged work) need an extra
   "I understand" tick.
 
+## Building installers
+
+Installers are made with [electron-builder](https://www.electron.build). Each system builds its own:
+
+| On | Run | You get (in `release/`) |
+| --- | --- | --- |
+| Windows | `npm run dist:win` | `Gitpicky-<version>-win-x64.exe` installer (plus arm64) and a portable `.zip` |
+| macOS | `npm run dist:mac` | `.dmg` and `.zip` (universal: Intel + Apple Silicon) |
+| Linux | `npm run dist:linux` | `.AppImage` and `.deb` |
+
+macOS installers can only be built on a Mac. The easy way to get all three is GitHub Actions:
+push a version tag and `.github/workflows/build.yml` builds on Windows, macOS and Linux, then
+attaches everything to a draft release for you to review and publish.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+You can also start a build from the **Actions** tab (**Build → Run workflow**) and download the
+installers from that run's Artifacts.
+
+The builds aren't code-signed yet, so:
+
+- **Windows:** SmartScreen may say "Windows protected your PC". Click **More info → Run anyway**.
+- **macOS:** right-click the app and choose **Open** the first time. If macOS says the app is
+  damaged, run `xattr -cr /Applications/Gitpicky.app`.
+- **Building on Windows:** if electron-builder fails with "Cannot create symbolic link", turn on
+  **Developer Mode** in Windows Settings (or run the terminal as administrator) and try again.
+
 ## Development
 
 ```bash
 npm test          # unit + integration tests (uses throwaway git repos)
 npm run typecheck # strict TypeScript for both the app and the window code
 npm run build     # compile to dist/
+npm run dist      # build an installer for the system you're on (see above)
 ```
 
 ```
@@ -113,6 +148,7 @@ src/
   renderer/  The window: history drawing, side panels, dialogs (no framework)
   mcp/       The MCP server (stdio)
 assets/icons Icon candidates (SVG sources + PNG renders)
+build/       Installer resources (app icon)
 test/        Vitest suites
 ```
 
@@ -120,7 +156,7 @@ test/        Vitest suites
 
 ## Roadmap
 
-- Windows installer (electron-builder) and auto-update
+- Code signing and auto-update
 - Pick the final icon (guitar pick vs. tweezers)
 - File diffs in the details panel
 - Guided conflict resolution

@@ -25,10 +25,11 @@ async function call(name: string, args: Record<string, unknown>): Promise<{ text
 }
 
 beforeAll(async () => {
-  execFileSync(process.execPath, [join('node_modules', 'typescript', 'bin', 'tsc'), '-p', 'tsconfig.json'], { stdio: 'inherit' });
+  // Test the bundled file that installers ship.
+  execFileSync(process.execPath, [join('scripts', 'build-mcp.mjs')], { stdio: 'inherit' });
   client = new Client({ name: 'test', version: '1.0.0' });
   await client.connect(
-    new StdioClientTransport({ command: process.execPath, args: ['dist/mcp/server.js'], env: { ...process.env, GITPICKY_HOME: home } as Record<string, string> }),
+    new StdioClientTransport({ command: process.execPath, args: ['dist/mcp/gitpicky-mcp.js'], env: { ...process.env, GITPICKY_HOME: home } as Record<string, string> }),
   );
 }, 60_000);
 

@@ -25,6 +25,8 @@ export interface GitpickyApi {
   plan(op: Operation): Promise<Result<Plan>>;
   run(op: Operation): Promise<Result<RunOutcome>>;
   openExternal(url: string): Promise<void>;
+  /** Absolute path of the bundled MCP server script, for the assistant's config. */
+  mcpServerPath(): Promise<string>;
   /** Changes an assistant has asked for through the MCP server. */
   proposals(): Promise<ProposalView[]>;
   approveProposal(id: string): Promise<Result<ProposalView>>;
