@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- The still part of the README banner. capture.mjs fills the {{...}} values
+     from media.json, renders this at 1280x400 and saves it as banner_bg.png;
+     build_media.py then pastes the recorded footage into the panel on the right
+     (x 860, y 30, 340x340). -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'Banner'; src: url('{{FONT}}'); font-weight: 300 700; }
+html, body { margin: 0; width: 1280px; height: 400px; overflow: hidden; background: #14151b; }
+svg { display: block; }
+</style></head><body>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" font-family="Banner, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#191a22"/>
+      <stop offset="1" stop-color="#121318"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb45c"/>
+      <stop offset="1" stop-color="#e8673a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f39a45" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#f39a45" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="400" fill="url(#bg)"/>
+
+  <!-- A faint commit graph running behind everything, in the app's lane colors. -->
+  <g fill="none" stroke-width="3" stroke-linecap="round" opacity=".22" transform="translate(0 36)">
+    <path d="M-20 300 H300 C340 300 340 250 380 250 H820" stroke="#f39a45"/>
+    <path d="M120 300 C160 300 160 350 200 350 H520 C560 350 560 300 600 300 H820" stroke="#8d82e8"/>
+    <path d="M440 250 C480 250 480 200 520 200 H700 C740 200 740 250 780 250" stroke="#4fc3c9"/>
+  </g>
+  <g opacity=".3" transform="translate(0 36)">
+    <circle cx="60" cy="300" r="7" fill="#f39a45"/><circle cx="240" cy="300" r="7" fill="#f39a45"/>
+    <circle cx="300" cy="350" r="7" fill="#8d82e8"/><circle cx="450" cy="350" r="7" fill="#8d82e8"/>
+    <circle cx="460" cy="250" r="7" fill="#f39a45"/><circle cx="620" cy="200" r="7" fill="#4fc3c9"/>
+    <circle cx="680" cy="250" r="7" fill="#f39a45"/><circle cx="700" cy="300" r="7" fill="#8d82e8"/>
+    <circle cx="780" cy="250" r="9" fill="none" stroke="#f39a45" stroke-width="3"/>
+  </g>
+
+  <!-- Logo, title, tagline, points -->
+  <g transform="translate(64 58) scale(0.42)">{{LOGO}}</g>
+  <text x="186" y="128" font-size="86" font-weight="700" letter-spacing="1" fill="url(#title)">{{TITLE}}</text>
+  <text x="68" y="190" font-size="27" font-weight="500" fill="#e8e9ee">{{TAGLINE}}</text>
+  <g font-size="17" font-weight="500" fill="#9aa0b0">{{POINTS}}</g>
+
+  <!-- The footage panel -->
+  <circle cx="1030" cy="200" r="260" fill="url(#glow)"/>
+  <rect x="852" y="22" width="356" height="356" rx="16" fill="#0f1015" stroke="#f39a45" stroke-opacity=".75" stroke-width="2"/>
+</svg>
+</body></html>

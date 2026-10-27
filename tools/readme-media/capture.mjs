@@ -1,38 +1,38 @@
 #!/usr/bin/env node
 // Records README footage of the real Gitpicky app.
 //
-// readme_media's own `capture` step drives Godot games. Gitpicky is an Electron
-// app, so this script plays that part: it builds a demo repository, launches
-// the app with Playwright, clicks through each feature like a person would,
-// and saves every frame as a PNG in readme_media's layout
-// (<work>/<recording>/frames/f00000000.png). After that, readme_media's
-// `contact` and `build` commands work unchanged.
+// It builds demo repositories (made-up people, nothing from your machine),
+// launches the app with Playwright using its own settings folder, clicks
+// through each scene listed in media.json like a person would, and saves
+// every frame as <work>/frames/f00000000.png. It also renders the banner's
+// still background (banner.html) to <work>/banner_bg.png.
+// build_media.py then turns all of that into the README GIFs.
 //
 //   npm run build
-//   node tools/readme_capture/capture.mjs
+//   npm run readme:capture
 //
 // Frames are screenshots taken after each step, so timing is set by frame
 // counts rather than the clock: re-recording gives the same footage.
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { DEMO, buildDemoRepo } from './demo-repo.mjs';
+import { buildDemoRepo, buildSideRepos } from './demo-repo.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
-const CONFIG = resolve(process.argv[2] ?? join(HERE, 'readme_media.json'));
+const CONFIG = resolve(process.argv[2] ?? join(HERE, 'media.json'));
 const cfg = JSON.parse(readFileSync(CONFIG, 'utf8'));
 const WORK = resolve(dirname(CONFIG), cfg.work ?? '.work');
-const RECORDING = 'showcase';
-const FRAMES = join(WORK, RECORDING, 'frames');
-const TOTAL = cfg.recordings[RECORDING].frames;
-const FIRST = cfg.hero.first;
-const SEGMENT = cfg.hero.segment;
-const VIEW = { width: 1280, height: 720 };
+const FRAMES = join(WORK, 'frames');
+const FIRST = cfg.first;
+const SEGMENT = cfg.segment;
+const TOTAL = FIRST + cfg.scenes.length * SEGMENT;
+const VIEW = { width: cfg.viewport[0], height: cfg.viewport[1] };
 
 // ------------------------------------------------------------------ setup
 
@@ -41,8 +41,27 @@ mkdirSync(FRAMES, { recursive: true });
 const home = join(WORK, 'home');
 rmSync(home, { recursive: true, force: true });
 mkdirSync(home, { recursive: true });
-const repo = buildDemoRepo(join(WORK, 'demo'));
-const env = { ...process.env, GITPICKY_HOME: home, ELECTRON_DISABLE_SECURITY_WARNINGS: '1' };
+// Demo repositories live in a neutral temp folder, because their paths show up
+// in the recent-repositories list on screen.
+const DEMO_ROOT = join(tmpdir(), 'gitpicky-demo');
+const repo = buildDemoRepo(DEMO_ROOT);
+const sideRepos = buildSideRepos(DEMO_ROOT);
+
+// The app gets its own settings folder, pre-filled with a recent list, so a
+// recording never touches (or shows) your real recent repositories.
+const userData = join(WORK, 'userdata');
+rmSync(userData, { recursive: true, force: true });
+mkdirSync(userData, { recursive: true });
+const day = 24 * 60 * 60 * 1000;
+writeFileSync(
+  join(userData, 'settings.json'),
+  JSON.stringify({
+    recentRepos: [repo, ...sideRepos.slice(0, 3)].map((path, i) => ({ path, lastOpened: new Date(Date.now() - i * 1.7 * day).toISOString() })),
+    scanRoots: [DEMO_ROOT],
+  }),
+);
+
+const env = { ...process.env, GITPICKY_HOME: home, GITPICKY_USER_DATA: userData, ELECTRON_DISABLE_SECURITY_WARNINGS: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 
 const electronPath = (await import('electron')).default;
@@ -173,7 +192,7 @@ await placeCursor(pos.x, pos.y);
 await shot();
 await padTo(FIRST, 'title');
 
-const scenes = [
+const SCENES = Object.fromEntries([
   [
     'commit',
     async () => {
@@ -213,7 +232,7 @@ const scenes = [
   [
     'assistant',
     async () => {
-      // A real MCP client asks for the change, exactly as Claude would.
+      // A real MCP client asks for the change, exactly as an AI assistant would.
       const client = new Client({ name: 'readme-capture', version: '1.0.0' });
       await client.connect(
         new StdioClientTransport({ command: process.execPath, args: [join(ROOT, 'dist', 'mcp', 'gitpicky-mcp.js')], env }),
@@ -237,6 +256,20 @@ const scenes = [
     },
   ],
   [
+    'repos',
+    async () => {
+      await click('.repo-name', { settle: 500, after: 8 });
+      await moveTo(330, 230);
+      await hold(10);
+      await click('.picker-browse', { settle: 900, after: 4 });
+      await moveTo(760, 420);
+      await hold(26);
+      await type('.browser-search', 'level', 1);
+      await hold(8);
+      await click('.browser-row >> nth=0', { settle: 1200, after: 20 });
+    },
+  ],
+  [
     'learn',
     async () => {
       await click('.tab >> text=Learn');
@@ -245,14 +278,41 @@ const scenes = [
       await click('.chip >> text=Branch', { after: 20 });
     },
   ],
-];
+]);
 
-for (const [n, [name, run]] of scenes.entries()) {
+for (const [n, name] of cfg.scenes.entries()) {
+  const run = SCENES[name];
+  if (!run) throw new Error(`media.json lists an unknown scene "${name}"`);
   const end = FIRST + (n + 1) * SEGMENT;
   await run();
   console.log(`${name}: ${frame - (end - SEGMENT)} of ${SEGMENT} frames`);
   await padTo(end, name);
 }
-await hold(TOTAL - frame);
-await app.close();
 console.log(`${frame} frames in ${FRAMES}`);
+
+// ------------------------------------------------------------------ banner background
+
+const b = cfg.banner;
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const logo = readFileSync(join(ROOT, 'assets', 'icons', 'gitpicky-pick.svg'), 'utf8')
+  .replace(/^[\s\S]*?<svg[^>]*>/, '')
+  .replace(/<\/svg>\s*$/, '');
+const points = (b.points ?? [])
+  .map(
+    (p, i) =>
+      `<circle cx="74" cy="${232 + i * 32}" r="4" fill="#f39a45"/><text x="88" y="${238 + i * 32}">${esc(p)}</text>`,
+  )
+  .join('');
+const html = readFileSync(join(HERE, 'banner.html'), 'utf8')
+  .replace('{{FONT}}', pathToFileURL(join(HERE, 'fonts', 'SpaceGrotesk-Variable.ttf')).href)
+  .replace('{{LOGO}}', logo)
+  .replace('{{TITLE}}', esc(b.title))
+  .replace('{{TAGLINE}}', esc(b.tagline))
+  .replace('{{POINTS}}', points);
+await page.setViewportSize({ width: 1280, height: 400 });
+await page.setContent(html);
+await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(300);
+await page.screenshot({ path: join(WORK, 'banner_bg.png') });
+console.log(`banner background in ${join(WORK, 'banner_bg.png')}`);
+await app.close();

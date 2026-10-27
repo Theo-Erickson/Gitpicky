@@ -1,0 +1,26 @@
+{
+  "out": "../../.github/readme",
+  "work": ".work",
+  "viewport": [1280, 720],
+  "first": 30,
+  "segment": 150,
+  "scenes": ["commit", "merge", "authors", "assistant", "repos", "learn"],
+  "banner": {
+    "title": "Gitpicky",
+    "tagline": "Git, explained by picture",
+    "points": ["Preview every change", "Learn every word", "Approve your AI assistant"],
+    "scenes": {
+      "commit": "Preview a commit",
+      "merge": "Merge a branch",
+      "authors": "Fix authors",
+      "assistant": "Assistant request"
+    },
+    "crop": [200, 40, 880, 720],
+    "take": [12, 146],
+    "step": 2,
+    "ms": 110
+  },
+  "hero": {"size": [480, 270], "title": [0, 30], "take": [8, 146], "step": 3, "ms": 160},
+  "clips": {"size": [400, 225], "take": [0, 150], "step": 2, "ms": 120},
+  "stills": {"commit": 55, "authors": 70, "assistant": 30}
+}

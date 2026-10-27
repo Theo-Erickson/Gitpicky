@@ -139,9 +139,14 @@ Every clip is the real app, recorded clicking through a demo project (see
 </tr>
 <tr>
 <td align="center"><img src=".github/readme/clip_learn.gif" width="400" alt="Searching the glossary for detached HEAD"><br><b>Learn</b>: every git word in plain English</td>
-<td align="center"><img src=".github/readme/screenshot_authors.png" width="400" alt="The author fix preview listing whose credit changes and what is already pushed"><br>Warnings before history is rewritten</td>
+<td align="center"><img src=".github/readme/clip_repos.gif" width="400" alt="Finding a project in the repository browser and opening it"><br><b>Find projects</b>: every repo in your folders</td>
 </tr>
 </table>
+
+<p align="center">
+  <img src=".github/readme/screenshot_authors.png" width="820" alt="The author fix preview listing whose credit changes and what is already pushed"><br>
+  <sub>Before rewriting history, Gitpicky spells out whose credit changes and what that means for anyone else.</sub>
+</p>
 
 <details>
 <summary><b>How to read the picture</b></summary>
@@ -313,24 +318,30 @@ src/
   mcp/       The MCP server (stdio)
 assets/icons Icon candidates (SVG sources and PNG renders)
 build/       Installer resources (app icon)
-tools/       README media: readme_media (studio tool) and the Electron capture driver
+tools/       readme-media: records and builds the README's GIFs
 test/        Vitest suites
 ```
 
 ### Recording the README media
 
-The banner, hero and clips are made with the studio's `readme_media` tool
-(`tools/readme_media/`, unchanged). Its `capture` step drives Godot games, so
-`tools/readme_capture/capture.mjs` does that part for Gitpicky: it builds a demo repository, opens
-the real app with Playwright, clicks through each feature and saves the frames in the same layout.
-`contact` and `build` then work as usual.
+Everything under `.github/readme/` is the real app, recorded by two scripts in
+`tools/readme-media/`:
+
+- `capture.mjs` builds a few demo repositories with made-up people in a temp folder, opens the app
+  with Playwright (using its own settings folder, so your recent list is never touched or shown),
+  clicks through each scene listed in `media.json`, and saves every frame. It also renders the
+  banner background from `banner.html`.
+- `build_media.py` turns those frames into the banner, hero, clips and stills.
 
 ```bash
 npm run build
-npm run readme:capture   # records tools/readme_capture/.work/showcase/frames
-npm run readme:contact   # numbered contact sheet for checking frame ranges
-npm run readme:build     # writes .github/readme/*.gif (needs Python, Pillow, Edge or Chrome)
+npm run readme:capture   # records tools/readme-media/.work/frames
+npm run readme:contact   # numbered contact sheet, for checking each scene fits its slot
+npm run readme:build     # writes .github/readme/ (needs Python and Pillow)
 ```
+
+Scenes, their order, the banner text and crop, and the GIF sizes and speeds all live in
+`media.json`.
 
 ## Roadmap
 
@@ -349,4 +360,4 @@ npm run readme:build     # writes .github/readme/*.gif (needs Python, Pillow, Ed
 ## License
 
 MIT © The Gitpicky contributors. The README font, Space Grotesk, is under the
-[SIL Open Font License](tools/readme_capture/fonts/OFL.txt).
+[SIL Open Font License](tools/readme-media/fonts/OFL.txt).

@@ -24,8 +24,8 @@ First working version.
 - Glossary: Author / Committer, Co-author, Rewriting history
 - Pick icon: branch glyph recentered so it no longer runs off the edge
 - Repo paths use the native Windows form, so the same repo is never treated as two
-- README rebuilt with real footage: banner, hero and clips recorded from the app with the
-  studio's readme_media tool and a new Electron capture driver (`tools/readme_capture/`)
+- README rebuilt with real footage: banner, hero and clips recorded from the app by
+  `tools/readme-media/` (a Playwright capture script and a Pillow GIF builder)
 - Esc closes a preview or form from anywhere in the window
 - Recent repositories dropdown: the last 12 repos with their branch, filter, keyboard navigation,
   remove from list, flags folders that were moved or deleted; Ctrl/Cmd+O opens it

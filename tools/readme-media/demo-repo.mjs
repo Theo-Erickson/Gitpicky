@@ -4,7 +4,7 @@
 // Everyone in it is made up.
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync, appendFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync, appendFileSync, utimesSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export const DEMO = {
@@ -78,4 +78,48 @@ export function buildDemoRepo(root) {
   write('scripts/menu.gd', 'func _on_resume_pressed() -> void:\n\tget_tree().paused = false\n');
   writeFileSync(join(repo, 'level-ideas.md'), '- ice cave with slippery floors\n');
   return repo;
+}
+
+/** Small extra repositories, so the recent-repositories list has something to show. */
+export function buildSideRepos(root) {
+  const specs = [
+    ['level-editor', ['Initial editor shell', 'Add tile palette', 'Snap tiles to the grid', 'Save levels as JSON'], 'feature/undo'],
+    ['studio-website', ['Initial site', 'Add press kit page'], null],
+    ['sound-bank', ['Import footstep sounds', 'Normalize volume'], null],
+    ['dialogue-system', ['Initial dialogue runner', 'Add branching choices', 'Add portraits'], 'feature/voice-lines'],
+    ['pixel-tools', ['Initial palette swapper', 'Add outline filter'], null],
+  ];
+  const now = Math.floor(Date.now() / 1000);
+  return specs.map(([name, messages, branch], r) => {
+    const repo = join(root, name);
+    rmSync(repo, { recursive: true, force: true });
+    mkdirSync(repo, { recursive: true });
+    const git = (args, env = {}) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: { ...process.env, ...env } });
+    git(['init', '-q', '-b', 'main']);
+    git(['config', 'user.name', DEMO.me.name]);
+    git(['config', 'user.email', DEMO.me.email]);
+    git(['config', 'commit.gpgsign', 'false']);
+    git(['config', 'core.autocrlf', 'false']);
+    let when = now - (30 - r * 3) * DAY;
+    messages.forEach((message, i) => {
+      when += Math.round(1.6 * DAY);
+      writeFileSync(join(repo, `notes-${i}.md`), `${message}\n`);
+      git(['add', '-A']);
+      const who = i % 3 === 2 ? DEMO.teammate : DEMO.me;
+      git(['commit', '-q', `--author=${who.name} <${who.email}>`, '-m', message], {
+        GIT_AUTHOR_DATE: `${when} +0000`,
+        GIT_COMMITTER_DATE: `${when} +0000`,
+      });
+    });
+    if (branch) {
+      git(['switch', '-q', '-c', branch]);
+      when += DAY;
+      writeFileSync(join(repo, 'wip.md'), 'work in progress\n');
+      git(['add', '-A']);
+      git(['commit', '-q', '-m', `Start ${branch.split('/').pop()}`], { GIT_AUTHOR_DATE: `${when} +0000`, GIT_COMMITTER_DATE: `${when} +0000` });
+    }
+    // The repository browser shows "last activity" from these files' times.
+    for (const f of ['index', 'HEAD']) utimesSync(join(repo, '.git', f), when, when);
+    return repo;
+  });
 }

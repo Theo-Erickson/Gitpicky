@@ -22,9 +22,9 @@
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux AppImage",
-    "readme:capture": "node tools/readme_capture/capture.mjs",
-    "readme:contact": "python tools/readme_media/readme_media.py contact tools/readme_capture/readme_media.json",
-    "readme:build": "python tools/readme_media/readme_media.py build tools/readme_capture/readme_media.json"
+    "readme:capture": "node tools/readme-media/capture.mjs",
+    "readme:contact": "python tools/readme-media/build_media.py --sheet",
+    "readme:build": "python tools/readme-media/build_media.py"
   },
   "engines": {
     "node": ">=20"
