@@ -2,3 +2,6 @@
 * text=auto eol=lf
 *.png binary
 *.ico binary
+# Windows batch files need CRLF line endings to run reliably
+*.cmd text eol=crlf
+*.bat text eol=crlf

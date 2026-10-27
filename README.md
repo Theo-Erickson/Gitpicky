@@ -104,6 +104,9 @@ Restart the assistant, keep Gitpicky open, and ask things like:
 
 ## Building installers
 
+**On Windows, the easy way:** double-click `Build-Windows.cmd`. It checks for Node and Git, installs
+dependencies, runs the tests, builds the installer and opens the `release` folder.
+
 Installers are made with [electron-builder](https://www.electron.build). Each system builds its own:
 
 | On | Run | You get (in `release/`) |
@@ -112,9 +115,13 @@ Installers are made with [electron-builder](https://www.electron.build). Each sy
 | macOS | `npm run dist:mac` | `.dmg` and `.zip` (universal: Intel + Apple Silicon) |
 | Linux | `npm run dist:linux` | `.AppImage` and `.deb` |
 
-macOS installers can only be built on a Mac. The easy way to get all three is GitHub Actions:
-push a version tag and `.github/workflows/build.yml` builds on Windows, macOS and Linux, then
-attaches everything to a draft release for you to review and publish.
+macOS installers can only be built on a Mac, so GitHub Actions (`.github/workflows/build.yml`) builds
+all three for you:
+
+- **Every push to `main`:** tests run on Windows, macOS and Linux, then installers for all three are
+  attached to the run under **Artifacts**.
+- **A version tag:** the same, plus a draft GitHub Release with the installers attached, ready for
+  you to review and publish.
 
 ```bash
 git tag v0.1.0
