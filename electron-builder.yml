@@ -1,6 +1,10 @@
 # Installer settings. Run `npm run dist` on each OS (or let GitHub Actions do it).
 appId: dev.gitpicky.app
 productName: Gitpicky
+
+extraMetadata:
+  homepage: "https://github.com/Theo-Erickson/Gitpicky"
+
 copyright: Copyright © 2026 The Gitpicky contributors
 
 directories:

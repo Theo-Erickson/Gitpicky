@@ -41,15 +41,11 @@ jobs:
 
       - name: Build installers
         if: github.event_name != 'pull_request'
-        # The .deb package needs a homepage; use this repository's address so
-        # nothing personal has to be written into package.json.
-        # Bash on every system: Windows' default PowerShell splits arguments
-        # like -c.extraMetadata.homepage=... at the dot, which breaks the build.
         shell: bash
-        run: npm run dist -- --publish never -c.extraMetadata.homepage=${{ github.server_url }}/${{ github.repository }}
+        run: npm run dist -- --publish never
         env:
           # No code-signing certificates yet; skip looking for them on macOS.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
       - name: Upload installers
         if: github.event_name != 'pull_request'
