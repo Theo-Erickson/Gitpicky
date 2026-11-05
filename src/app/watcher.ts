@@ -1,7 +1,20 @@
 import { watch, type FSWatcher } from 'node:fs';
 import { sep } from 'node:path';
 
-const NOISY = [`${sep}.git${sep}objects`, `${sep}node_modules${sep}`, `.git${sep}index.lock`];
+const NOISY = [`${sep}.git${sep}objects`, `${sep}node_modules${sep}`];
+
+/**
+ * Changes that never matter on their own: lock files git creates and deletes
+ * while it works, and the event for the .git folder itself (which fires whenever
+ * anything inside it is created or removed). The real change that follows, like
+ * a ref or the index being rewritten, is still seen. Exported for tests.
+ */
+export function isNoise(file: string): boolean {
+  const name = `${sep}${file}`;
+  if (NOISY.some((n) => name.includes(n))) return true;
+  if (name.endsWith('.lock') && name.includes(`${sep}.git${sep}`)) return true;
+  return name === `${sep}.git` || name.endsWith(`${sep}.git`);
+}
 
 /**
  * Watches a repository (its files and its .git folder) and calls `onChange`
@@ -20,8 +33,7 @@ export class RepoWatcher {
     this.stop();
     try {
       this.watcher = watch(repo, { recursive: true }, (_event, file) => {
-        const name = file ? `${sep}${file.toString()}` : '';
-        if (NOISY.some((n) => name.includes(n))) return;
+        if (file && isNoise(file.toString())) return;
         this.schedule();
       });
       this.watcher.on('error', () => this.stop());

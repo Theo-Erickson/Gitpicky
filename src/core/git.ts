@@ -41,6 +41,9 @@ export function runGit(cwd: string, args: string[], options: RunGitOptions = {})
           GIT_TERMINAL_PROMPT: '0',
           GIT_EDITOR: 'true',
           GIT_PAGER: 'cat',
+          // Reads like `git status` otherwise briefly take .git/index.lock to refresh the index, which
+          // wakes the file watcher (an endless refresh loop) and can clash with the person's own git tools.
+          GIT_OPTIONAL_LOCKS: '0',
           LC_ALL: 'C',
         },
       },

@@ -59,11 +59,19 @@ const root = document.getElementById('app')!;
 
 // ---------------------------------------------------------------- data
 
+/** The last snapshot drawn, to skip redraws when a refresh finds nothing new. */
+let lastSnapshotKey = '';
+
 async function load(result: Promise<{ ok: true; value: RepoSnapshot } | { ok: false; error: string } | null>): Promise<void> {
   const r = await result;
   if (!r) return;
   if (r.ok) {
     const changedRepo = state.snapshot?.path !== r.value.path;
+    // Nothing new (e.g. refreshing on window focus): leave the window alone so an
+    // open dropdown or the text box you're typing in isn't rebuilt under you.
+    const key = JSON.stringify(r.value);
+    if (!changedRepo && !state.error && key === lastSnapshotKey) return;
+    lastSnapshotKey = key;
     state.snapshot = r.value;
     state.error = null;
     if (changedRepo) {
@@ -852,6 +860,7 @@ function render(): void {
   const scroller = document.querySelector('.history');
   const scrollTop = scroller?.scrollTop ?? 0;
   const sidebarScroll = document.querySelector('.sidebar-body')?.scrollTop ?? 0;
+  const focus = focusedField();
   clear(root);
   const snapshot = state.snapshot;
   root.appendChild(header(snapshot));
@@ -892,6 +901,33 @@ function render(): void {
   history.scrollTop = scrollTop;
   const body = document.querySelector('.sidebar-body');
   if (body) body.scrollTop = sidebarScroll;
+  focus?.();
+}
+
+/**
+ * Remembers which text field has the cursor (and where), so a redraw can put it
+ * back. Returns null when no text field is focused.
+ */
+function focusedField(): (() => void) | null {
+  const el = document.activeElement;
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || !root.contains(el)) return null;
+  const all = [...root.querySelectorAll<HTMLElement>('input, textarea')];
+  const index = all.indexOf(el);
+  const cls = el.className;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  return () => {
+    // Prefer the same kind of field (by class); fall back to its position on the page.
+    const candidates = [...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')];
+    const next = (cls ? candidates.find((c) => c.className === cls) : undefined) ?? candidates[index];
+    if (!next || next.disabled) return;
+    next.focus({ preventScroll: true });
+    try {
+      if (start !== null && end !== null) next.setSelectionRange(start, end);
+    } catch {
+      // Checkboxes and some input types don't have a selection.
+    }
+  };
 }
 
 // ---------------------------------------------------------------- start
