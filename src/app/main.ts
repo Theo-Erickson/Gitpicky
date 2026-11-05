@@ -6,6 +6,11 @@ import { readCommitFiles, readCommitMessage, readSnapshot } from '../core/histor
 import { executePlan, planChange, type Operation } from '../core/operations';
 import type { RepoSnapshot } from '../core/types';
 import type { Result } from './api';
+import type { AssistantRequest, AssistantSettings, ClientId } from '../core/assistant-protocol';
+import { nodeLaunch, type Launch } from './assistant/cli';
+import { clientStatuses, connectClient, disconnectClient, genericConfig } from './assistant/connect';
+import { ollamaUrlFromEnv } from './assistant/providers';
+import { AssistantService } from './assistant/service';
 import { Bridge } from './bridge';
 import { ProposalQueue } from './proposals';
 import type { BrowseResult } from './api';
@@ -104,6 +109,20 @@ function mcpServerPath(): string {
     : join(ROOT, 'dist', 'mcp', 'gitpicky-mcp.js');
 }
 
+/** How AI tools start the bundled MCP server: with Node if it's installed, otherwise with this app in Node mode. */
+function mcpLaunch(): Launch | null {
+  const node = nodeLaunch(process.execPath);
+  return node ? { command: node.command, args: [...node.args, mcpServerPath()], env: node.env } : null;
+}
+
+const assistant = new AssistantService({
+  mcp: mcpLaunch,
+  node: () => nodeLaunch(process.execPath),
+  repo: () => currentRepo,
+  ollamaUrl: () => settings.assistant.ollamaUrl ?? ollamaUrlFromEnv(),
+  emit: (event) => win?.webContents.send('assistant:event', event),
+});
+
 /** Suggested scan folders: common project folders, plus wherever your recent repositories live. */
 function defaultRoots(): string[] {
   const roots = suggestedRoots();
@@ -145,6 +164,30 @@ function registerIpc(): void {
     return browse();
   });
   ipcMain.handle('mcp:server-path', () => mcpServerPath());
+  ipcMain.handle('mcp:config', () => {
+    const launch = mcpLaunch();
+    return launch ? genericConfig(launch) : genericConfig({ command: 'node', args: [mcpServerPath()] });
+  });
+  ipcMain.handle('mcp:clients', () => clientStatuses(mcpServerPath()));
+  ipcMain.handle('mcp:connect', (_e, id: ClientId) =>
+    wrap(async () => {
+      const launch = mcpLaunch();
+      if (!launch) throw new Error("Node.js wasn't found, so other tools couldn't start Gitpicky's MCP server. Install it from nodejs.org.");
+      connectClient(id, launch);
+      return clientStatuses(mcpServerPath());
+    }),
+  );
+  ipcMain.handle('mcp:disconnect', (_e, id: ClientId) =>
+    wrap(async () => {
+      disconnectClient(id);
+      return clientStatuses(mcpServerPath());
+    }),
+  );
+  ipcMain.handle('assistant:providers', () => assistant.detect());
+  ipcMain.handle('assistant:settings', () => settings.assistant);
+  ipcMain.handle('assistant:update-settings', (_e, change: Partial<AssistantSettings>) => settings.updateAssistant(change));
+  ipcMain.handle('assistant:ask', (_e, request: AssistantRequest) => wrap(async () => assistant.send(request)));
+  ipcMain.handle('assistant:cancel', () => assistant.cancel());
   ipcMain.handle('repo:pick', async () => {
     if (!win) return null;
     const choice = await dialog.showOpenDialog(win, {
@@ -240,7 +283,10 @@ app.whenReady().then(async () => {
   });
 });
 
-app.on('will-quit', () => bridge.stop());
+app.on('will-quit', () => {
+  assistant.cancel();
+  bridge.stop();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

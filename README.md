@@ -67,8 +67,10 @@ The name is a nod to *nitpicky*: pick exactly the change you want, nothing more.
 - **Fixes who gets credit.** Change the author of commits made with the wrong email, or remove
   `Co-authored-by` lines. Gitpicky spells out whose credit changes, whether the commits are
   already on GitHub, and what that means for anyone else using the branch.
-- **Works with your AI assistant.** The bundled MCP server lets Claude (or any MCP client) read
-  the repo, explain terms, preview changes, and *propose* them for you to approve.
+- **Works with your AI assistant.** Chat with Ollama, Claude Code, Codex or GitHub Copilot right in
+  the app, or connect Gitpicky to those tools (and VS Code, Claude Desktop, Gemini CLI) with one
+  click. Either way they read the repo, explain terms, preview changes, and *propose* them for you
+  to approve.
 
 ### Every change goes through a plan
 
@@ -223,9 +225,30 @@ sequenceDiagram
     Claude-->>You: "Done. It's on the new branch."
 ```
 
-Open Gitpicky's **Assistant** tab and click **Copy config**. It fills in the right path for your
-copy. Paste it into your assistant's MCP settings (for Claude Desktop: **Settings → Developer →
-Edit Config**) and restart the assistant:
+### Ask from inside Gitpicky
+
+The **Assistant** tab has a chat box. Pick which AI does the thinking:
+
+| Assistant | What you need | How Gitpicky talks to it |
+| --- | --- | --- |
+| **Ollama** | [Ollama](https://ollama.com/download) running, plus a model that can use tools (e.g. `ollama pull qwen3`) | Over Ollama's local API; the app hands the model Gitpicky's tools |
+| **Claude Code** | The `claude` command, signed in | Runs `claude -p` with Gitpicky's MCP server attached |
+| **Codex** | The `codex` command, signed in | Runs `codex exec` (read-only sandbox) with the MCP server attached |
+| **GitHub Copilot** | The `copilot` command, signed in | Runs `copilot -p` with the MCP server attached; shell and file writes are denied |
+
+Gitpicky finds the ones installed on your computer (click **Check again** after installing one).
+Whichever you pick, it only gets Gitpicky's tools, and every change still shows up as a preview
+for you to approve.
+
+### Use Gitpicky from your other AI tools
+
+Under **Use Gitpicky from your other AI tools**, click **Connect** next to Claude Code, Claude
+Desktop, Codex, GitHub Copilot CLI, VS Code (Copilot Chat) or Gemini CLI. Gitpicky adds itself to
+that tool's MCP settings (keeping everything else, and saving a `.gitpicky-backup` copy first);
+restart the tool to pick it up. **Disconnect** takes it out again. Requests from each tool are
+labelled with its name.
+
+For any other MCP client, click **Copy config** and paste it into its MCP settings:
 
 ```json
 {
@@ -237,6 +260,9 @@ Edit Config**) and restart the assistant:
   }
 }
 ```
+
+If Node.js isn't installed, Gitpicky points the config at its own app in Node mode instead, so it
+still works.
 
 <details>
 <summary><b>The 7 tools your assistant gets</b></summary>

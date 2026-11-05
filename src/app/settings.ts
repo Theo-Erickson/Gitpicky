@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { PROVIDER_IDS, type AssistantSettings, type ProviderId } from '../core/assistant-protocol';
 
 export interface RecentEntry {
   path: string;
@@ -11,6 +12,24 @@ export interface Settings {
   recentRepos: RecentEntry[];
   /** Folders the repository browser looks in. null until you change it (suggested folders are used). */
   scanRoots: string[] | null;
+  assistant: AssistantSettings;
+}
+
+const isProvider = (v: unknown): v is ProviderId => typeof v === 'string' && (PROVIDER_IDS as string[]).includes(v);
+
+function normalizeAssistant(raw: unknown): AssistantSettings {
+  const a = (raw ?? {}) as Partial<Record<keyof AssistantSettings, unknown>>;
+  const models: AssistantSettings['models'] = {};
+  if (a.models && typeof a.models === 'object') {
+    for (const [k, v] of Object.entries(a.models as Record<string, unknown>)) {
+      if (isProvider(k) && typeof v === 'string' && v) models[k] = v;
+    }
+  }
+  return {
+    provider: isProvider(a.provider) ? a.provider : null,
+    models,
+    ollamaUrl: typeof a.ollamaUrl === 'string' && /^https?:\/\//.test(a.ollamaUrl) ? a.ollamaUrl.replace(/\/+$/, '') : null,
+  };
 }
 
 export const MAX_RECENT = 12;
@@ -29,7 +48,7 @@ function normalize(raw: unknown): Settings {
     : [];
   const roots = (raw as { scanRoots?: unknown } | null)?.scanRoots;
   const scanRoots = Array.isArray(roots) ? roots.filter((r): r is string => typeof r === 'string' && r !== '') : null;
-  return { recentRepos: recentRepos.slice(0, MAX_RECENT), scanRoots };
+  return { recentRepos: recentRepos.slice(0, MAX_RECENT), scanRoots, assistant: normalizeAssistant((raw as { assistant?: unknown } | null)?.assistant) };
 }
 
 export class SettingsStore {
@@ -39,7 +58,7 @@ export class SettingsStore {
     try {
       this.data = normalize(JSON.parse(readFileSync(file, 'utf8')));
     } catch {
-      this.data = { recentRepos: [], scanRoots: null };
+      this.data = normalize(null);
     }
   }
 
@@ -78,6 +97,18 @@ export class SettingsStore {
   removeScanRoot(path: string, fallback: string[]): void {
     this.data.scanRoots = this.scanRoots(fallback).filter((r) => sameKey(r) !== sameKey(path));
     this.save();
+  }
+
+  get assistant(): AssistantSettings {
+    return { ...this.data.assistant, models: { ...this.data.assistant.models } };
+  }
+
+  /** Merges in a change to the assistant choices (invalid values are dropped). */
+  updateAssistant(change: Partial<AssistantSettings>): AssistantSettings {
+    const merged = { ...this.data.assistant, ...change, models: { ...this.data.assistant.models, ...(change.models ?? {}) } };
+    this.data.assistant = normalizeAssistant(merged);
+    this.save();
+    return this.assistant;
   }
 
   private save(): void {

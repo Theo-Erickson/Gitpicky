@@ -33,3 +33,9 @@ First working version.
 - Repository browser (Ctrl/Cmd+Shift+O): every repo in your project folders, grouped by folder, with
   branch, last activity and search; finds common project folders and your recent repos' folders
   automatically, and you can add or remove folders
+- In-app assistant chat: use Ollama (local models), Claude Code, Codex or GitHub Copilot as the
+  assistant; each gets only Gitpicky's tools, and changes still need your approval
+- One-click "Connect" to add Gitpicky's MCP server to Claude Code, Claude Desktop, Codex, GitHub
+  Copilot CLI, VS Code (Copilot Chat) and Gemini CLI, with a backup of each settings file
+- Proposals name the tool that asked (e.g. "Codex is asking to:")
+- The MCP config falls back to running the server with Gitpicky itself when Node.js isn't installed

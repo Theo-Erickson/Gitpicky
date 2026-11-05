@@ -3,6 +3,7 @@ import type { ProposalView } from '../core/bridge-protocol';
 import { lookupTerm } from '../core/glossary';
 import { applyPreview, type Operation, type Plan } from '../core/preview';
 import type { Commit, FileChange, Ref, RepoSnapshot } from '../core/types';
+import { initAssistant, renderChat, renderConnect } from './assistant-panel';
 import { ask, closeDialog, isDialogOpen, riskPill, showPlanDialog } from './dialogs';
 import { clear, h, relativeTime } from './dom';
 import { WORKING_HASH, badge, renderGraph } from './graph-view';
@@ -30,8 +31,6 @@ interface State {
   picker: PickerState;
   browser: BrowserState;
   proposals: ProposalView[];
-  /** Where the bundled MCP server is, for the setup snippet. */
-  mcpPath: string;
   /** Proposal shown in the review dialog right now. */
   reviewing: string | null;
 }
@@ -52,7 +51,6 @@ const state: State = {
   picker: { open: false, query: '', active: 0 },
   browser: newBrowserState(),
   proposals: [],
-  mcpPath: '',
   reviewing: null,
 };
 
@@ -340,10 +338,6 @@ function reviewProposal(p: ProposalView): void {
   });
 }
 
-function mcpConfig(): string {
-  return JSON.stringify({ mcpServers: { gitpicky: { command: 'node', args: [state.mcpPath || 'path/to/gitpicky-mcp.js'] } } }, null, 2);
-}
-
 function assistantPanel(): HTMLElement {
   const list = state.proposals;
   const statusText: Record<ProposalView['status'], string> = {
@@ -356,32 +350,11 @@ function assistantPanel(): HTMLElement {
   return h(
     'section',
     { class: 'panel' },
-    h('h2', null, 'Assistant requests'),
-    h(
-      'p',
-      { class: 'muted assistant-intro' },
-      'When an AI assistant (like Claude) is connected through the Gitpicky MCP server, the changes it wants to make show up here. Nothing happens until you approve.',
-    ),
+    h('h2', null, 'Assistant'),
+    renderChat(),
+    list.length ? h('h3', { class: 'requests-title' }, 'Requests') : null,
     list.length === 0
-      ? h(
-          'div',
-          { class: 'setup' },
-          h('h3', null, 'Connect an assistant'),
-          h('p', null, 'Add this to your assistant\'s MCP settings (for Claude Desktop: Settings → Developer → Edit Config), then restart the assistant. You also need Node.js installed (nodejs.org).'),
-          h('pre', null, mcpConfig()),
-          h(
-            'button',
-            {
-              type: 'button',
-              onclick: async () => {
-                await navigator.clipboard.writeText(mcpConfig());
-                flash('Config copied.');
-              },
-            },
-            'Copy config',
-          ),
-          h('p', null, 'Then ask something like "make a branch for my new level and commit what I have".'),
-        )
+      ? null
       : list.map((p) =>
           h(
             'article',
@@ -396,6 +369,7 @@ function assistantPanel(): HTMLElement {
               : null,
           ),
         ),
+    renderConnect(list.length > 0),
   );
 }
 
@@ -969,7 +943,7 @@ document.addEventListener('drop', (e) => {
 
 async function start(): Promise<void> {
   state.recent = await api.recentRepos();
-  state.mcpPath = await api.mcpServerPath();
+  await initAssistant(api, render, flash);
   api.onRepoChanged(() => {
     if (!state.preview) void refresh();
   });

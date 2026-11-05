@@ -1052,6 +1052,153 @@ body.dropping #app::after {
 .status-rejected {
   color: var(--danger);
 }
+/* chat with an assistant */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.chat-pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.chat-pickers select {
+  width: auto;
+  min-width: 130px;
+  flex: 1 1 130px;
+}
+.chat-pickers .link {
+  white-space: nowrap;
+  flex: none;
+}
+.chat-help {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.chat-help summary {
+  cursor: pointer;
+}
+.chat-help ul {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.chat-help li {
+  margin-bottom: 4px;
+}
+.chat-none {
+  color: var(--warning);
+  margin: 0;
+}
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.chat-empty {
+  margin: 4px 0;
+}
+.chat-msg {
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  max-width: 92%;
+}
+.chat-user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg));
+}
+.chat-assistant {
+  align-self: flex-start;
+  background: var(--bg-sunken);
+}
+.chat-error {
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+}
+.chat-thinking {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.chat-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.chat-tool {
+  font-size: 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+}
+.chat-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-compose textarea {
+  resize: vertical;
+}
+.chat-compose .actions {
+  justify-content: flex-end;
+}
+.requests-title {
+  margin-top: 4px;
+}
+
+/* connecting other AI tools */
+.setup > summary {
+  cursor: pointer;
+  list-style-position: outside;
+}
+.setup > summary h3 {
+  display: inline;
+}
+.clients {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 14px;
+}
+.client {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--bg);
+}
+.client-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.client-name {
+  font-weight: 600;
+  flex: 1 1 auto;
+}
+.client-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+.client-note {
+  font-size: 12px;
+  color: var(--warning);
+  margin-top: 4px;
+}
+
 .tab-count {
   display: inline-block;
   margin-left: 6px;

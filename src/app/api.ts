@@ -1,6 +1,7 @@
 // The bridge between the window (renderer) and the app's main process.
 // Type-only, so both sides can import it.
 
+import type { AssistantEvent, AssistantRequest, AssistantSettings, ClientId, ClientStatus, ProviderStatus } from '../core/assistant-protocol';
 import type { ProposalView } from '../core/bridge-protocol';
 import type { FileChange, RepoSnapshot } from '../core/types';
 import type { Operation, Plan } from '../core/preview';
@@ -81,6 +82,20 @@ export interface GitpickyApi {
   approveProposal(id: string): Promise<Result<ProposalView>>;
   rejectProposal(id: string, note?: string): Promise<Result<ProposalView>>;
   onProposalsChanged(listener: () => void): () => void;
+  /** Which AI tools can be the in-app assistant, and their models. */
+  assistantProviders(): Promise<ProviderStatus[]>;
+  assistantSettings(): Promise<AssistantSettings>;
+  updateAssistantSettings(change: Partial<AssistantSettings>): Promise<AssistantSettings>;
+  /** Starts one assistant turn; progress arrives through onAssistantEvent. */
+  askAssistant(request: AssistantRequest): Promise<Result<void>>;
+  cancelAssistant(): Promise<void>;
+  onAssistantEvent(listener: (event: AssistantEvent) => void): () => void;
+  /** Other AI tools that Gitpicky's MCP server can be added to. */
+  mcpClients(): Promise<ClientStatus[]>;
+  connectMcpClient(id: ClientId): Promise<Result<ClientStatus[]>>;
+  disconnectMcpClient(id: ClientId): Promise<Result<ClientStatus[]>>;
+  /** Ready-to-paste MCP config for any other tool. */
+  mcpConfig(): Promise<string>;
   /** Called whenever files or history change on disk. Returns an unsubscribe function. */
   onRepoChanged(listener: () => void): () => void;
 }

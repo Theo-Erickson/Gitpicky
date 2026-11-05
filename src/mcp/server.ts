@@ -139,7 +139,7 @@ server.registerTool(
   },
   guard(async ({ repo_path, operation, reason, wait_seconds }) => {
     const root = await requireRepo(repo_path);
-    const created = await callApp<ProposalView>('POST', '/proposals', { repo: root, operation, reason, requestedBy: 'Your assistant' });
+    const created = await callApp<ProposalView>('POST', '/proposals', { repo: root, operation, reason, requestedBy: process.env.GITPICKY_ASSISTANT || 'Your assistant' });
     if (created.status !== 'pending') return text(formatProposal(created));
     const wait = wait_seconds ?? 90;
     if (wait === 0) return text(formatProposal(created));

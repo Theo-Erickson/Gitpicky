@@ -25,6 +25,20 @@ const api: GitpickyApi = {
     ipcRenderer.on('proposals:changed', handler);
     return () => ipcRenderer.removeListener('proposals:changed', handler);
   },
+  assistantProviders: () => ipcRenderer.invoke('assistant:providers'),
+  assistantSettings: () => ipcRenderer.invoke('assistant:settings'),
+  updateAssistantSettings: (change) => ipcRenderer.invoke('assistant:update-settings', change),
+  askAssistant: (request) => ipcRenderer.invoke('assistant:ask', request),
+  cancelAssistant: () => ipcRenderer.invoke('assistant:cancel'),
+  onAssistantEvent: (listener) => {
+    const handler = (_e: unknown, event: Parameters<typeof listener>[0]) => listener(event);
+    ipcRenderer.on('assistant:event', handler);
+    return () => ipcRenderer.removeListener('assistant:event', handler);
+  },
+  mcpClients: () => ipcRenderer.invoke('mcp:clients'),
+  connectMcpClient: (id) => ipcRenderer.invoke('mcp:connect', id),
+  disconnectMcpClient: (id) => ipcRenderer.invoke('mcp:disconnect', id),
+  mcpConfig: () => ipcRenderer.invoke('mcp:config'),
   onRepoChanged: (listener) => {
     const handler = () => listener();
     ipcRenderer.on('repo:changed', handler);
